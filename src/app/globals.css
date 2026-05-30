@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Gaegu", "Pretendard", system-ui, sans-serif;
+  --font-sans: "Pretendard", system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--paper, #fdfcf7);
+  color: #1a1a2e;
+  font-family: var(--font-sans);
+  /* 종이 질감 느낌의 미세한 도트 배경 */
+  background-image: radial-gradient(rgba(61, 90, 241, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* 손글씨 느낌 강조용 밑줄 */
+.scribble-underline {
+  text-decoration: none;
+  background-image: linear-gradient(transparent 60%, rgba(251, 191, 36, 0.5) 60%);
+}
+
+/* 카드 공통 */
+.card {
+  background: #fff;
+  border: 2px solid #1a1a2e;
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 #1a1a2e;
+}
