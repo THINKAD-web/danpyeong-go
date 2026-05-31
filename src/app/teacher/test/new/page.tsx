@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { MOCK_UNITS } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
 import type { GeneratedQuestion } from "@/lib/ai";
+
+type Unit = { id: string; term: number; order: number; name: string };
 
 export default function NewTestPage() {
   const [term, setTerm] = useState(2);
-  const [unitId, setUnitId] = useState("u3-2-1");
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [unitsLoading, setUnitsLoading] = useState(true);
+  const [unitsError, setUnitsError] = useState<string | null>(null);
+
+  const [unitId, setUnitId] = useState("");
   const [count, setCount] = useState(5);
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [type, setType] = useState<"MULTIPLE_CHOICE" | "SHORT_ANSWER">("MULTIPLE_CHOICE");
@@ -16,19 +21,36 @@ export default function NewTestPage() {
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const units = MOCK_UNITS.filter((u) => u.term === term);
+  // 학기 변경 시 단원 목록 재조회
+  useEffect(() => {
+    setUnitsLoading(true);
+    setUnitsError(null);
+    fetch(`/api/units?term=${term}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("단원 목록 오류");
+        return r.json();
+      })
+      .then((data: { units: Unit[] }) => {
+        setUnits(data.units);
+        if (data.units.length > 0) setUnitId(data.units[0].id);
+      })
+      .catch(() => setUnitsError("단원 목록을 불러오지 못했어요."))
+      .finally(() => setUnitsLoading(false));
+  }, [term]);
+
+  const currentUnit = units.find((u) => u.id === unitId);
 
   async function handleGenerate() {
+    if (!currentUnit) return;
     setLoading(true);
     setError(null);
-    const unit = MOCK_UNITS.find((u) => u.id === unitId);
     try {
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           unitId,
-          unitName: unit?.name ?? "",
+          unitName: currentUnit.name,
           term,
           count,
           difficulty,
@@ -55,9 +77,6 @@ export default function NewTestPage() {
         <Link href="/teacher" className="text-sm font-bold text-brand">
           ← 대시보드
         </Link>
-        <span className="rounded-full border-2 border-ink bg-sun/30 px-3 py-1 text-xs font-bold">
-          mock 생성
-        </span>
       </nav>
 
       <h1 className="font-display text-4xl font-bold">AI로 문항 만들기</h1>
@@ -71,12 +90,7 @@ export default function NewTestPage() {
           <Field label="학기">
             <select
               value={term}
-              onChange={(e) => {
-                const t = Number(e.target.value);
-                setTerm(t);
-                const first = MOCK_UNITS.find((u) => u.term === t);
-                if (first) setUnitId(first.id);
-              }}
+              onChange={(e) => setTerm(Number(e.target.value))}
               className="select"
             >
               <option value={1}>1학기</option>
@@ -84,17 +98,23 @@ export default function NewTestPage() {
             </select>
           </Field>
           <Field label="단원">
-            <select
-              value={unitId}
-              onChange={(e) => setUnitId(e.target.value)}
-              className="select"
-            >
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.order}. {u.name}
-                </option>
-              ))}
-            </select>
+            {unitsLoading ? (
+              <div className="select flex items-center text-ink/40">불러오는 중…</div>
+            ) : unitsError ? (
+              <div className="select flex items-center text-coral text-sm">{unitsError}</div>
+            ) : (
+              <select
+                value={unitId}
+                onChange={(e) => setUnitId(e.target.value)}
+                className="select"
+              >
+                {units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.order}. {u.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </Field>
         </div>
 
@@ -134,7 +154,7 @@ export default function NewTestPage() {
 
         <button
           onClick={handleGenerate}
-          disabled={loading}
+          disabled={loading || unitsLoading || !!unitsError || !unitId}
           className="card w-full bg-brand py-3 font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-50"
         >
           {loading ? "생성 중…" : "✨ AI로 문항 생성"}
@@ -167,7 +187,12 @@ export default function NewTestPage() {
                         {q.type === "MULTIPLE_CHOICE" ? "객관식" : "단답형"}
                       </span>
                       <span className="rounded-full bg-sun/30 px-2 py-0.5">
-                        난이도 {q.difficulty === "EASY" ? "하" : q.difficulty === "MEDIUM" ? "중" : "상"}
+                        난이도{" "}
+                        {q.difficulty === "EASY"
+                          ? "하"
+                          : q.difficulty === "MEDIUM"
+                          ? "중"
+                          : "상"}
                       </span>
                     </div>
                     <p className="font-bold">
