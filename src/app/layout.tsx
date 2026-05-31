@@ -1,6 +1,21 @@
 import type { Metadata } from "next";
+import { Gaegu, Noto_Sans_KR } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
+
+const gaegu = Gaegu({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const notoSansKR = Noto_Sans_KR({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "단평GO — 초등 단원평가, AI로 5분 컷!",
@@ -12,18 +27,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko">
-      <head>
-        {/* 디스플레이: Gaegu(손글씨 느낌) / 본문: Pretendard */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
-        />
-      </head>
+    <html lang="ko" className={`${gaegu.variable} ${notoSansKR.variable}`}>
       <body>
         <ClerkProvider>{children}</ClerkProvider>
       </body>
