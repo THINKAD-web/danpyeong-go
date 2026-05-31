@@ -8,6 +8,8 @@ export const metadata: Metadata = {
     "초등 교사가 2022 개정 교육과정에 맞춰 단원평가를 AI로 빠르게 만들고 배포·채점·분석하는 경량 SaaS",
 };
 
+const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -25,7 +27,11 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ClerkProvider>{children}</ClerkProvider>
+        {publishableKey ? (
+          <ClerkProvider publishableKey={publishableKey}>{children}</ClerkProvider>
+        ) : (
+          children
+        )}
       </body>
     </html>
   );
