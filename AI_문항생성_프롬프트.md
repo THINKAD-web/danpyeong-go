@@ -44,6 +44,11 @@
 
 ## 3. USER 프롬프트 템플릿
 
+> **설계 원칙**: 모델은 `isCorrect` 플래그를 출력하지 않는다.
+> 대신 `correctValue`(정답 텍스트)와 `distractors`(오답 3개)를 분리 출력하고,
+> 서버 코드가 이를 섞어 `choices[]`를 조립하며 `isCorrect`를 기계적으로 부여한다.
+> → stem-정답 불일치를 구조적으로 차단.
+
 ```
 다음 조건으로 초등학교 3학년 수학 단원평가 문항을 만들어 주세요.
 
@@ -54,7 +59,7 @@
 - 난이도: {{DIFFICULTY}}  (하=기초 계산/개념 확인, 중=개념 적용, 상=문장제·복합 사고)
 - 유형: {{TYPE}}  (MULTIPLE_CHOICE=객관식 4지선다 / SHORT_ANSWER=단답형)
 
-아래 JSON 스키마로만 응답하세요:
+[객관식(MULTIPLE_CHOICE)일 경우] 아래 JSON 스키마로만 응답하세요:
 
 {
   "questions": [
@@ -62,21 +67,31 @@
       "type": "MULTIPLE_CHOICE",
       "difficulty": "{{DIFFICULTY}}",
       "stem": "문제 본문",
-      "choices": [
-        { "order": 1, "text": "보기1", "isCorrect": false },
-        { "order": 2, "text": "보기2", "isCorrect": true },
-        { "order": 3, "text": "보기3", "isCorrect": false },
-        { "order": 4, "text": "보기4", "isCorrect": false }
-      ],
-      "answerKeywords": [],
+      "correctValue": "정답 텍스트 그대로 (예: 72, 3팀, 128자루)",
+      "distractors": ["오답1", "오답2", "오답3"],
       "explanation": "단계적 풀이 해설"
     }
   ]
 }
 
-단답형(SHORT_ANSWER)일 경우:
-- "choices"는 빈 배열 []
-- "answerKeywords"에 정답으로 인정할 표현을 배열로 (예: ["12", "12개"])
+주의:
+- isCorrect 필드는 출력하지 않는다. 보기 조합·순서는 서버가 처리한다.
+- distractors 3개는 서로 다른 값이어야 하고, correctValue와도 달라야 한다.
+- correctValue는 stem을 직접 계산한 결과여야 한다.
+
+[단답형(SHORT_ANSWER)일 경우] 아래 JSON 스키마로만 응답하세요:
+
+{
+  "questions": [
+    {
+      "type": "SHORT_ANSWER",
+      "difficulty": "{{DIFFICULTY}}",
+      "stem": "문제 본문",
+      "answerKeywords": ["정답1", "정답1의 다른 표현"],
+      "explanation": "단계적 풀이 해설"
+    }
+  ]
+}
 ```
 
 ---
@@ -125,10 +140,22 @@
 
 ---
 
-## 6. 품질 가드 (구현 시)
+## 6. 품질 가드 (구현)
 
-- 응답 JSON 파싱 실패 시 1회 재시도 → 그래도 실패하면 교사에게 "다시 생성" 노출.
-- 객관식 `isCorrect: true`가 정확히 1개인지 서버에서 검증.
-- 보기 개수 4개 검증.
-- 생성 문항은 항상 `isReviewed: false`로 저장 → 교사 검수 전에는 배포 불가 처리(권장).
-```
+### stem-정답 불일치 구조적 차단 (2-pass)
+- **Pass 1**: 모델이 `correctValue` + `distractors` 분리 생성 (`isCorrect` 없음)
+- **Pass 2**: 모델이 stem을 독립 계산해 `correctValue` 검증·교정
+- **조립**: 서버 코드가 `correctValue` 기준으로 `isCorrect` 기계적 부여
+
+### 서버 검증 (`validateQuestion`)
+- `choices` 4개 확인
+- `isCorrect: true` 정확히 1개 확인
+- 보기 중복값 없음 확인 (distractors ≠ correctValue, distractors 간 중복 없음)
+- 단답형 `answerKeywords` 1개 이상 확인
+
+### 재시도 정책
+- JSON 파싱 실패 시 1회 재시도 → 그래도 실패하면 교사에게 "다시 생성" 노출
+- Pass 2 실패 시 Pass 1 결과 유지 (graceful fallback)
+
+### 저장 정책
+- 생성 문항은 항상 `isReviewed: false`로 저장 → 교사 검수 전에는 배포 불가 처리(권장)
