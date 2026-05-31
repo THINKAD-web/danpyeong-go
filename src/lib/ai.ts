@@ -1,15 +1,10 @@
 // ============================================================
-// AI 문항 생성 — Mock 구현
-// 실제 Grok/Claude 호출 없이, 프롬프트 템플릿과 동일한 JSON 형태를
-// 반환하여 화면 흐름을 검증할 수 있게 한다.
-//
-// ▶ Claude Code 작업 (TASK 0 이후):
-//   generateQuestions() 내부의 mock 생성부를 실제 모델 호출로 교체.
-//   - SYSTEM/USER 프롬프트는 docs/AI_문항생성_프롬프트.md 참고
-//   - 응답 JSON 파싱 → 아래 GeneratedQuestion[] 형태로 정규화
-//   - isCorrect 1개 검증, 보기 4개 검증은 그대로 재사용
+// AI 문항 생성 — Claude API 연동
+// 모델: claude-haiku-4-5-20251001 (비용·속도 최적)
+// 프롬프트: AI_문항생성_프롬프트.md SYSTEM/USER 원문 그대로 사용
 // ============================================================
 
+import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 
 export const GenerateInputSchema = z.object({
@@ -38,92 +33,122 @@ export type GeneratedQuestion = {
   explanation: string;
 };
 
-// --- mock 데이터 생성용 헬퍼 ---
-function randInt(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+const SYSTEM_PROMPT = `당신은 대한민국 초등학교 수학 평가 문항 출제 전문가입니다.
+2022 개정 교육과정을 따르며, 초등학교 3학년 학생의 인지 수준에 맞는
+단원평가 문항을 출제합니다.
+
+[출제 원칙]
+- 3학년 학생이 이해할 수 있는 쉽고 명확한 한국어를 사용한다.
+- 한 문항은 하나의 개념만 평가한다.
+- 객관식은 4지선다이며, 정답은 정확히 1개다.
+- 오답(매력적 오답)은 학생이 흔히 하는 실수를 반영하되, 명백히 틀린 것이어야 한다.
+- 보기 간 길이·형식을 비슷하게 맞춰 정답이 티 나지 않게 한다.
+- 숫자 계산은 반드시 검산하여 정답과 해설이 일치하도록 한다.
+- 문화적으로 한국 초등학생에게 자연스러운 소재(이름, 상황)를 쓴다.
+- 해설은 풀이 과정을 단계적으로, 3학년이 읽을 수 있게 쓴다.
+
+[금지]
+- 교육과정 범위를 벗어나는 개념(예: 3학년에 미등장 연산) 사용 금지.
+- 함정성 표현, 이중 부정, 모호한 문장 금지.
+- 특정 교과서·기출문제의 문구를 그대로 베끼지 않는다(자체 창작).
+
+[출력 형식]
+- 반드시 유효한 JSON만 출력한다. 코드펜스(\`\`\`)나 설명 문장을 절대 덧붙이지 않는다.`;
+
+const DIFFICULTY_LABEL: Record<GenerateInput["difficulty"], string> = {
+  EASY: "하",
+  MEDIUM: "중",
+  HARD: "상",
+};
+
+const TYPE_LABEL: Record<GenerateInput["type"], string> = {
+  MULTIPLE_CHOICE: "MULTIPLE_CHOICE",
+  SHORT_ANSWER: "SHORT_ANSWER",
+};
+
+function buildUserPrompt(input: GenerateInput): string {
+  const diffLabel = DIFFICULTY_LABEL[input.difficulty];
+  const typeLabel = TYPE_LABEL[input.type];
+  return `다음 조건으로 초등학교 3학년 수학 단원평가 문항을 만들어 주세요.
+
+- 학년/학기: 3학년 ${input.term}학기
+- 단원: ${input.unitName}
+- 성취기준(참고): 해당 단원의 핵심 계산 및 개념 이해
+- 문항 수: ${input.count}개
+- 난이도: ${diffLabel}  (하=기초 계산/개념 확인, 중=개념 적용, 상=문장제·복합 사고)
+- 유형: ${typeLabel}  (MULTIPLE_CHOICE=객관식 4지선다 / SHORT_ANSWER=단답형)
+
+아래 JSON 스키마로만 응답하세요:
+
+{
+  "questions": [
+    {
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "${input.difficulty}",
+      "stem": "문제 본문",
+      "choices": [
+        { "order": 1, "text": "보기1", "isCorrect": false },
+        { "order": 2, "text": "보기2", "isCorrect": true },
+        { "order": 3, "text": "보기3", "isCorrect": false },
+        { "order": 4, "text": "보기4", "isCorrect": false }
+      ],
+      "answerKeywords": [],
+      "explanation": "단계적 풀이 해설"
+    }
+  ]
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+단답형(SHORT_ANSWER)일 경우:
+- "choices"는 빈 배열 []
+- "answerKeywords"에 정답으로 인정할 표현을 배열로 (예: ["12", "12개"])`;
 }
 
-/** 곱셈 단원용 mock 객관식 1문항 */
-function mockMultiplyQuestion(difficulty: GenerateInput["difficulty"]): GeneratedQuestion {
-  const a = difficulty === "EASY" ? randInt(2, 9) : randInt(11, 49);
-  const b = randInt(2, 9);
-  const answer = a * b;
-  // 흔한 실수 기반 오답
-  const distractors = new Set<number>();
-  distractors.add(answer + b);
-  distractors.add(answer - b);
-  distractors.add(a + b);
-  while (distractors.size < 3) distractors.add(answer + randInt(1, 9));
-  const wrong = [...distractors].filter((n) => n !== answer).slice(0, 3);
+async function callClaude(input: GenerateInput): Promise<GeneratedQuestion[]> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.");
 
-  const options = shuffle([
-    { value: answer, isCorrect: true },
-    ...wrong.map((v) => ({ value: v, isCorrect: false })),
-  ]);
+  const client = new Anthropic({ apiKey });
+  const response = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 4096,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: buildUserPrompt(input) }],
+  });
 
-  return {
-    type: "MULTIPLE_CHOICE",
-    difficulty,
-    stem: `${a} × ${b} 는 얼마일까요?`,
-    choices: options.map((o, i) => ({
-      order: i + 1,
-      text: String(o.value),
-      isCorrect: o.isCorrect,
-    })),
-    answerKeywords: [],
-    explanation: `${a}을(를) ${b}번 더하면 ${answer}입니다. 따라서 ${a} × ${b} = ${answer}.`,
-  };
-}
-
-/** 단답형 mock 1문항 */
-function mockShortAnswerQuestion(difficulty: GenerateInput["difficulty"]): GeneratedQuestion {
-  const a = difficulty === "EASY" ? randInt(2, 9) : randInt(11, 49);
-  const b = randInt(2, 9);
-  const answer = a * b;
-  return {
-    type: "SHORT_ANSWER",
-    difficulty,
-    stem: `사과가 한 상자에 ${a}개씩 들어 있습니다. ${b}상자에는 사과가 모두 몇 개 있을까요?`,
-    choices: [],
-    answerKeywords: [String(answer), `${answer}개`],
-    explanation: `한 상자에 ${a}개씩 ${b}상자이므로 ${a} × ${b} = ${answer}(개)입니다.`,
-  };
+  const rawText = response.content[0].type === "text" ? response.content[0].text : "";
+  // 코드펜스(```json ... ```) 제거
+  const raw = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  const parsed = JSON.parse(raw) as { questions: GeneratedQuestion[] };
+  return parsed.questions;
 }
 
 /**
  * 문항 생성 진입점.
- * 현재는 mock. 실제 모델 연결 시 이 함수 내부만 교체하면 된다.
+ * JSON 파싱 실패 시 1회 재시도. 그래도 실패하면 에러를 throw.
  */
 export async function generateQuestions(
   input: GenerateInput
 ): Promise<GeneratedQuestion[]> {
   GenerateInputSchema.parse(input);
 
-  // --- 여기부터 mock 생성 (실제 API 호출로 교체 지점) ---
-  await new Promise((r) => setTimeout(r, 600)); // 생성 지연 흉내
-
-  const questions: GeneratedQuestion[] = [];
-  for (let i = 0; i < input.count; i++) {
-    questions.push(
-      input.type === "MULTIPLE_CHOICE"
-        ? mockMultiplyQuestion(input.difficulty)
-        : mockShortAnswerQuestion(input.difficulty)
-    );
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await callClaude(input);
+    } catch (e) {
+      lastError = e;
+      if (attempt === 0) {
+        // 재시도 전 잠시 대기
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
   }
-  return questions;
-  // --- mock 끝 ---
+  throw new Error(
+    `문항 생성 실패 (2회 시도): ${lastError instanceof Error ? lastError.message : String(lastError)}`
+  );
 }
 
-/** 객관식 정답 1개 / 보기 4개 검증 (실제 API 응답에도 재사용) */
+/** 객관식 정답 1개 / 보기 4개 검증 */
 export function validateQuestion(q: GeneratedQuestion): string | null {
   if (q.type === "MULTIPLE_CHOICE") {
     if (q.choices.length !== 4) return "객관식 보기는 4개여야 합니다.";

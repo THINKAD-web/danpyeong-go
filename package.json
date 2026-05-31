@@ -19,6 +19,7 @@
     "postcss": "$postcss"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
     "@prisma/client": "^6.2.1",
     "next": "15.5.18",
     "react": "^19.0.0",
