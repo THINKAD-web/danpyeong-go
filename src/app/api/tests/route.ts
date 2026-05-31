@@ -33,9 +33,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const teacher = currentTeacher();
+    const teacher = await currentTeacher();
 
-    // 교사 User upsert (Clerk 연동 전 임시)
     const author = await prisma.user.upsert({
       where: { clerkId: teacher.id },
       update: {},
@@ -109,7 +108,7 @@ export async function POST(req: NextRequest) {
 // 현재 교사의 테스트 목록 (대시보드용)
 export async function GET() {
   try {
-    const teacher = currentTeacher();
+    const teacher = await currentTeacher();
 
     const author = await prisma.user.findUnique({
       where: { clerkId: teacher.id },

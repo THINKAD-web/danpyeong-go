@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 import { currentTeacher } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TestActions } from "./TestActions";
@@ -12,7 +13,7 @@ const statusLabel: Record<string, { text: string; cls: string }> = {
 };
 
 async function getTeacherData() {
-  const teacher = currentTeacher();
+  const teacher = await currentTeacher();
 
   const author = await prisma.user.findUnique({
     where: { clerkId: teacher.id },
@@ -79,9 +80,10 @@ export default async function TeacherDashboard() {
         <Link href="/" className="font-display text-2xl font-bold text-brandink">
           단평<span className="text-coral">GO</span>
         </Link>
-        <span className="text-sm text-ink/60">
-          {teacher.name} 선생님 · <span className="text-ink/40">데모 계정</span>
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-ink/60">{teacher.name} 선생님</span>
+          <UserButton />
+        </div>
       </nav>
 
       <div className="flex items-center justify-between">

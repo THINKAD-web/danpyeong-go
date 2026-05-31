@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { currentTeacher } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { computeTestStats } from "@/lib/stats";
 import { ResultsClient } from "./ResultsClient";
 import { DownloadButtons } from "./DownloadButtons";
@@ -12,6 +14,14 @@ export default async function ResultsPage({
   params: Promise<{ testId: string }>;
 }) {
   const { testId } = await params;
+
+  // 소유권 확인: 다른 교사의 결과에 접근하지 못하도록
+  const teacher = await currentTeacher();
+  const author = await prisma.user.findUnique({ where: { clerkId: teacher.id } });
+  if (!author) notFound();
+  const owned = await prisma.test.findFirst({ where: { id: testId, ownerId: author.id } });
+  if (!owned) notFound();
+
   const stats = await computeTestStats(testId);
   if (!stats) notFound();
 

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { currentTeacher } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import {
   Document,
   Page,
@@ -216,6 +218,14 @@ export async function GET(
   { params }: { params: Promise<{ testId: string }> }
 ) {
   const { testId } = await params;
+
+  // 권한 검증: 이 테스트의 소유자인지 확인
+  const teacher = await currentTeacher();
+  const author = await prisma.user.findUnique({ where: { clerkId: teacher.id } });
+  if (!author) return NextResponse.json({ error: "권한 없음" }, { status: 403 });
+
+  const owned = await prisma.test.findFirst({ where: { id: testId, ownerId: author.id } });
+  if (!owned) return NextResponse.json({ error: "테스트를 찾을 수 없습니다." }, { status: 404 });
 
   const stats = await computeTestStats(testId);
   if (!stats) {
