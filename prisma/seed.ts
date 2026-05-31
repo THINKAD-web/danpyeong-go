@@ -24,6 +24,18 @@ const UNITS = [
 ];
 
 async function main() {
+  // 데모 교사 User (mock auth의 teacher_demo 기준, Clerk 연동 전 임시)
+  await prisma.user.upsert({
+    where: { clerkId: "teacher_demo" },
+    update: {},
+    create: {
+      clerkId: "teacher_demo",
+      email: "demo.teacher@danpyeong.go",
+      name: "김선생",
+      role: "TEACHER",
+    },
+  });
+
   const subject = await prisma.subject.upsert({
     where: { name_grade: { name: "수학", grade: 3 } },
     update: {},
@@ -44,7 +56,7 @@ async function main() {
     });
   }
 
-  console.log(`Seeded 수학 3학년 + ${UNITS.length} units`);
+  console.log(`Seeded: 데모 교사 + 수학 3학년 + ${UNITS.length} units`);
 }
 
 main()
