@@ -1,0 +1,361 @@
+# TASK 0 — AI 문항 생성 모델 비교 검증 (Grok vs Claude)
+
+> 목적: "AI가 한국 초등 3학년 수학 성취기준에 맞는 문항을 정확히 뽑는가"를 본 개발 전에 검증하고 기본 모델을 확정한다.
+> 기준 문서: `AI_문항생성_프롬프트.md`(SYSTEM/USER 템플릿·평가 기준표), `CLAUDE_CODE_작업지시서.md`(TASK 0).
+> 작성일: 2026-05-30 · 브랜치: `claude/task0-ai-model-comparison`
+
+---
+
+## 0. 실행 상태 요약 (먼저 읽어주세요)
+
+| 모델 | 상태 | 비고 |
+|------|------|------|
+| **Claude** | ✅ 완료 | 본 환경에서 직접 생성 + 전 문항 수기 검산 |
+| **Grok (xAI)** | ⏳ **보류** | 이 실행 환경의 **네트워크 허용목록에 `api.x.ai`가 없어 호출 차단**(HTTP 403 `Host not in allowlist`) |
+
+> Grok은 키 문제가 아니라 **환경 네트워크 정책** 때문에 차단됩니다. `api.x.ai`를 허용목록에 추가하면(환경 설정에서 변경) 즉시 동일 입력으로 재현·비교 가능합니다. 재현용 하니스는 [부록 A](#부록-a--grok-재현-하니스)에 있습니다.
+> **현 시점 결정(2026-05-30):** 환경 네트워크 정책으로 Grok 실호출이 막혀(`api.x.ai` 미허용) **Grok 직접 비교는 보류**하고, 합격선을 넘은 **Claude baseline으로 MVP를 진행**한다. `api.x.ai`가 허용되면 비교를 재개한다. 상세 근거·재개 조건·교체 설계는 아래 [6. 최종 추천/결정](#6-최종-추천-모델--근거) 참조.
+
+---
+
+## 1. 실험 설계 (동일 입력)
+
+`AI_문항생성_프롬프트.md`의 SYSTEM/USER 템플릿을 **그대로** 사용했다(임의 변경 없음). 성취기준(`achievementStandard`)은 현재 시드(`prisma/seed.ts`)에서 비어 있으므로, **프롬프트만으로의 baseline 성능**을 보기 위해 의도적으로 미주입(`(제공되지 않음)`)했다. 주입 효과는 [7. 개선 프롬프트](#7-개선된-확정-프롬프트-제안)에서 별도 논의한다.
+
+| 조건 | 단원(학기) | 문항 수 | 난이도 | 유형 |
+|------|-----------|--------|--------|------|
+| C1 | 곱셈 (3-2) | 5 | 중(MEDIUM) | 객관식(MULTIPLE_CHOICE) |
+| C2 | 나눗셈 (3-2) | 3 | 상(HARD) | 객관식(MULTIPLE_CHOICE) |
+| C3 | 들이와 무게 (3-2) | 3 | 중(MEDIUM) | 단답형(SHORT_ANSWER) |
+
+**적용한 교육과정 범위 기준(2022 개정, 3학년 2학기)** — 채점 시 "교육과정 적합성" 판단 근거:
+- 곱셈: (두 자리 수)×(한 자리 수), (세 자리 수)×(한 자리 수), (두 자리 수)×(두 자리 수)
+- 나눗셈: (두/세 자리 수)÷(한 자리 수), 나머지가 있는 나눗셈, 나머지의 해석
+- 들이와 무게: L·mL, kg·g·t 단위와 1 L=1000 mL, 1 kg=1000 g, 들이·무게의 덧셈과 뺄셈
+
+---
+
+## 2. 평가 기준 (각 5점, `AI_문항생성_프롬프트.md` §5 기준표)
+
+| 항목 | 확인 내용 |
+|------|-----------|
+| 교육과정 적합성 | 3학년 범위 내 개념만 쓰는가 |
+| 정답 정확성 | 계산·정답·해설이 일치하는가 (**직접 검산**) |
+| 난이도 적절성 | 3학년 수준 / 요청 난이도에 맞는가 |
+| 한국어 자연스러움 | 표현·소재가 자연스러운가 |
+| 형식 준수 | JSON 스키마 / 4지선다 / 정답 정확히 1개 / 단답 키워드 |
+
+---
+
+## 3. Claude 생성 결과 원문 (JSON)
+
+> 생성 주체: 본 세션의 Claude(claude-opus-4-8)가 SYSTEM/USER 프롬프트를 그대로 따라 JSON only로 생성. 사용자 지침("Claude는 별도 키 없이 직접 사용 가능")에 따라 API 대신 직접 생성했다. 실제 서비스 연결 시에는 Anthropic API로 동일 프롬프트를 호출하게 된다.
+
+### C1 — 곱셈(3-2) / 5문항 / 중 / 객관식
+
+```json
+{
+  "questions": [
+    {
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "MEDIUM",
+      "stem": "연필이 한 상자에 25자루씩 들어 있습니다. 3상자에 들어 있는 연필은 모두 몇 자루일까요?",
+      "choices": [
+        { "order": 1, "text": "28", "isCorrect": false },
+        { "order": 2, "text": "65", "isCorrect": false },
+        { "order": 3, "text": "75", "isCorrect": true },
+        { "order": 4, "text": "78", "isCorrect": false }
+      ],
+      "answerKeywords": [],
+      "explanation": "한 상자에 25자루씩 3상자이므로 25 × 3을 계산합니다. 5 × 3 = 15에서 1을 받아올림하고, 2 × 3 = 6에 1을 더하면 7이 되어 75자루입니다."
+    },
+    {
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "MEDIUM",
+      "stem": "한 봉지에 사탕이 48개씩 들어 있습니다. 6봉지에 들어 있는 사탕은 모두 몇 개일까요?",
+      "choices": [
+        { "order": 1, "text": "248", "isCorrect": false },
+        { "order": 2, "text": "268", "isCorrect": false },
+        { "order": 3, "text": "288", "isCorrect": true },
+        { "order": 4, "text": "296", "isCorrect": false }
+      ],
+      "answerKeywords": [],
+      "explanation": "48 × 6을 계산합니다. 8 × 6 = 48에서 4를 받아올림하고, 4 × 6 = 24에 4를 더하면 28이 되어 288개입니다."
+    },
+    {
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "MEDIUM",
+      "stem": "구슬을 한 줄에 13개씩 놓았습니다. 24줄을 놓으면 구슬은 모두 몇 개일까요?",
+      "choices": [
+        { "order": 1, "text": "292", "isCorrect": false },
+        { "order": 2, "text": "312", "isCorrect": true },
+        { "order": 3, "text": "322", "isCorrect": false },
+        { "order": 4, "text": "412", "isCorrect": false }
+      ],
+      "answerKeywords": [],
+      "explanation": "13 × 24는 13 × 20 = 260과 13 × 4 = 52로 나누어 더합니다. 260 + 52 = 312개입니다."
+    },
+    {
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "MEDIUM",
+      "stem": "학생 32명에게 색종이를 한 명당 5장씩 나누어 주려고 합니다. 색종이는 모두 몇 장 필요할까요?",
+      "choices": [
+        { "order": 1, "text": "150", "isCorrect": false },
+        { "order": 2, "text": "160", "isCorrect": true },
+        { "order": 3, "text": "162", "isCorrect": false },
+        { "order": 4, "text": "170", "isCorrect": false }
+      ],
+      "answerKeywords": [],
+      "explanation": "32 × 5를 계산합니다. 2 × 5 = 10에서 1을 받아올림하고, 3 × 5 = 15에 1을 더하면 16이 되어 160장입니다."
+    },
+    {
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "MEDIUM",
+      "stem": "한 상자에 귤이 36개씩 들어 있습니다. 7상자에 들어 있는 귤은 모두 몇 개일까요?",
+      "choices": [
+        { "order": 1, "text": "212", "isCorrect": false },
+        { "order": 2, "text": "242", "isCorrect": false },
+        { "order": 3, "text": "252", "isCorrect": true },
+        { "order": 4, "text": "262", "isCorrect": false }
+      ],
+      "answerKeywords": [],
+      "explanation": "36 × 7을 계산합니다. 6 × 7 = 42에서 4를 받아올림하고, 3 × 7 = 21에 4를 더하면 25가 되어 252개입니다."
+    }
+  ]
+}
+```
+
+### C2 — 나눗셈(3-2) / 3문항 / 상 / 객관식
+
+```json
+{
+  "questions": [
+    {
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "HARD",
+      "stem": "사탕 50개를 한 명에게 7개씩 나누어 주려고 합니다. 사탕을 받을 수 있는 사람은 최대 몇 명이고, 남는 사탕은 몇 개일까요?",
+      "choices": [
+        { "order": 1, "text": "6명, 8개 남음", "isCorrect": false },
+        { "order": 2, "text": "7명, 1개 남음", "isCorrect": true },
+        { "order": 3, "text": "7명, 7개 남음", "isCorrect": false },
+        { "order": 4, "text": "8명, 6개 남음", "isCorrect": false }
+      ],
+      "answerKeywords": [],
+      "explanation": "50 ÷ 7을 계산하면 몫이 7, 나머지가 1입니다. 7 × 7 = 49이고 50 - 49 = 1이므로 7명에게 나누어 줄 수 있고 1개가 남습니다. 나머지는 나누는 수 7보다 작아야 합니다."
+    },
+    {
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "HARD",
+      "stem": "색연필 138자루를 6명에게 똑같이 나누어 주려고 합니다. 한 명이 받는 색연필은 몇 자루일까요?",
+      "choices": [
+        { "order": 1, "text": "21", "isCorrect": false },
+        { "order": 2, "text": "22", "isCorrect": false },
+        { "order": 3, "text": "23", "isCorrect": true },
+        { "order": 4, "text": "24", "isCorrect": false }
+      ],
+      "answerKeywords": [],
+      "explanation": "138 ÷ 6을 계산합니다. 13 ÷ 6 = 2(나머지 1), 내려온 18 ÷ 6 = 3이므로 몫은 23자루입니다. 6 × 23 = 138로 확인됩니다."
+    },
+    {
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "HARD",
+      "stem": "공책 95권을 한 상자에 8권씩 담으려고 합니다. 모든 공책을 담으려면 상자는 적어도 몇 개 필요할까요?",
+      "choices": [
+        { "order": 1, "text": "10개", "isCorrect": false },
+        { "order": 2, "text": "11개", "isCorrect": false },
+        { "order": 3, "text": "12개", "isCorrect": true },
+        { "order": 4, "text": "13개", "isCorrect": false }
+      ],
+      "answerKeywords": [],
+      "explanation": "95 ÷ 8 = 11 나머지 7입니다. 11상자에 88권을 담으면 7권이 남으므로, 남은 7권을 담을 상자가 1개 더 필요합니다. 따라서 11 + 1 = 12개의 상자가 필요합니다."
+    }
+  ]
+}
+```
+
+### C3 — 들이와 무게(3-2) / 3문항 / 중 / 단답형
+
+```json
+{
+  "questions": [
+    {
+      "type": "SHORT_ANSWER",
+      "difficulty": "MEDIUM",
+      "stem": "물통에 물이 3 L 500 mL 들어 있습니다. 이 물은 모두 몇 mL일까요?",
+      "choices": [],
+      "answerKeywords": ["3500", "3500 mL", "3500mL"],
+      "explanation": "1 L는 1000 mL이므로 3 L는 3000 mL입니다. 여기에 500 mL를 더하면 3000 + 500 = 3500 mL입니다."
+    },
+    {
+      "type": "SHORT_ANSWER",
+      "difficulty": "MEDIUM",
+      "stem": "무게가 1 kg 200 g인 수박과 800 g인 멜론이 있습니다. 두 과일의 무게를 합하면 모두 몇 g일까요?",
+      "choices": [],
+      "answerKeywords": ["2000", "2000 g", "2000g"],
+      "explanation": "1 kg은 1000 g이므로 1 kg 200 g은 1200 g입니다. 멜론 800 g을 더하면 1200 + 800 = 2000 g입니다."
+    },
+    {
+      "type": "SHORT_ANSWER",
+      "difficulty": "MEDIUM",
+      "stem": "주스 2 L가 있습니다. 그중 750 mL를 마셨다면 남은 주스는 몇 mL일까요?",
+      "choices": [],
+      "answerKeywords": ["1250", "1250 mL", "1250mL"],
+      "explanation": "2 L는 2000 mL입니다. 마신 750 mL를 빼면 2000 - 750 = 1250 mL가 남습니다."
+    }
+  ]
+}
+```
+
+---
+
+## 4. 직접 검산 (정답 정확성 근거)
+
+| 조건·문항 | 식 | 정답 | 검산 | 판정 |
+|-----------|----|------|------|------|
+| C1-1 | 25 × 3 | 75 | 75 = ③ | ✅ |
+| C1-2 | 48 × 6 | 288 | 8×6=48(올림4), 4×6=24+4=28 → 288 = ③ | ✅ |
+| C1-3 | 13 × 24 | 312 | 260+52=312 = ② | ✅ |
+| C1-4 | 32 × 5 | 160 | 160 = ② | ✅ |
+| C1-5 | 36 × 7 | 252 | 6×7=42(올림4), 3×7=21+4=25 → 252 = ③ | ✅ |
+| C2-1 | 50 ÷ 7 | 7명·1개 | 7×7=49, 50−49=1, 나머지<7 = ② | ✅ |
+| C2-2 | 138 ÷ 6 | 23 | 6×23=138 = ③ | ✅ |
+| C2-3 | 95 ÷ 8 (올림 해석) | 12개 | 8×11=88, 7권 남음 → +1상자 = ③ | ✅ |
+| C3-1 | 3 L 500 mL → mL | 3500 | 3000+500 = 3500 | ✅ |
+| C3-2 | 1 kg 200 g + 800 g | 2000 g | 1200+800 = 2000 | ✅ |
+| C3-3 | 2 L − 750 mL | 1250 mL | 2000−750 = 1250 | ✅ |
+
+- **정답 오류: 0건**
+- **교육과정 이탈: 0건** (모든 문항이 3학년 2학기 곱셈/나눗셈/들이·무게 범위 내)
+- 객관식 정답 1개 규칙 위반: 0건 / 보기 4개 규칙 위반: 0건 / 단답 키워드 누락: 0건
+
+---
+
+## 5. 항목별 점수 비교 표
+
+| 항목 (5점) | Claude | Grok |
+|------------|:------:|:----:|
+| 교육과정 적합성 | 5 | ⏳ |
+| 정답 정확성 | 5 | ⏳ |
+| 난이도 적절성 | 5 | ⏳ |
+| 한국어 자연스러움 | 5 | ⏳ |
+| 형식 준수 | 5 | ⏳ |
+| **합계** | **25 / 25** | **⏳ (보류)** |
+| 정답 오류 건수 | 0 | ⏳ |
+| 교육과정 이탈 건수 | 0 | ⏳ |
+
+**Claude 점수 근거(자기평가, 보수적 관점 포함)**
+- 교육과정 적합성 5: C1 두 자리×한 자리/두 자리×두 자리, C2 나머지 해석·세 자리÷한 자리, C3 L↔mL·kg↔g 변환 — 모두 3-2 범위.
+- 정답 정확성 5: §4에서 11문항 전부 검산 일치.
+- 난이도 적절성 5: C2는 "나머지 해석(50÷7)", "올림 해석(95÷8 → 12상자)" 등 복합 사고형으로 '상'에 부합. C1·C3은 단일 개념 적용으로 '중'에 부합.
+- 한국어 자연스러움 5: 연필·사탕·구슬·색종이·귤·색연필·공책·수박·멜론·주스 등 초등 친화 소재, 이중 부정/함정 표현 없음.
+- 형식 준수 5: JSON only, 4지선다·정답 1개·단답 키워드 규칙 충족.
+
+> ⚠️ **자기평가 한계 명시:** Claude 출력의 채점자도 Claude이므로 편향 가능성이 있다. 정답 정확성은 §4의 독립 수기 검산으로 객관화했으나, "난이도/자연스러움" 같은 정성 항목은 Grok 결과와 나란히 놓고 재평가하는 것이 타당하다. 따라서 **만점이라도 최종 확정 근거로 삼지 않는다.**
+
+**관찰된 개선 여지(감점은 아니나 기록):**
+- 오답 보기 길이 편차: 객관식 정답은 흔한 실수(받아올림 누락 등) 기반으로 잘 설계됐으나, 일부 보기(C1-3의 412 등)는 "흔한 실수"라기보다 근접 수치에 가깝다. 매력적 오답의 일관성을 더 높일 수 있다.
+- 단답형 키워드: 단위 표기 변형(`3500 mL`/`3500mL`/`3500`)은 포함했으나, 학생이 단위를 빠뜨리거나 다른 단위로 답하는 경우(예: C3-2를 `2 kg`로 답)의 허용 여부는 정책 결정이 필요하다.
+
+---
+
+## 6. 최종 추천 모델 + 근거
+
+**현 시점 결정 (2026-05-30): 기본 모델 = Claude 로 MVP를 진행한다.**
+
+환경 네트워크 정책상 `api.x.ai`가 허용목록에 없어(HTTP 403 `Host not in allowlist`) Grok 실호출이 막혀, TASK 0의 *직접 비교*는 **보류**한다. 다만 Claude baseline이 합격선을 넘었으므로(아래 근거), MVP 개발을 막지 않기 위해 **잠정 기본 모델을 Claude로 결정**하고 개발을 진행한다.
+
+근거:
+1. **정확성** — 11문항 전수 검산에서 정답·해설·계산 불일치 0건. 본 서비스 최대 리스크(틀린 정답 배포)를 1차 통과.
+2. **교육과정 적합성** — 3-2 범위를 벗어난 개념(분수 곱셈, 소수 등) 사용 0건.
+3. **형식 안정성** — JSON only·4지선다·정답 1개·단답 키워드 규칙을 추가 후처리 없이 충족 → `validateQuestion()` 통과율 100% 예상.
+4. **운영 일관성** — 프롬프트(`AI_문항생성_프롬프트.md`)·서술형 채점 보조를 동일 벤더(Anthropic)로 묶으면 튜닝·관측이 단순하다(`기획.md` §7도 Claude 전제).
+
+**Grok 비교 — 보류 사유 및 재개 조건:**
+- 보류 사유: 실행 환경의 네트워크 허용목록에 `api.x.ai` 미포함(환경 네트워크 정책). 키·코드 문제가 아니며, 여러 차례 환경 재설정 시도에도 세션에 반영되지 않음.
+- 재개 트리거: 환경 네트워크 정책에 `api.x.ai` 허용(또는 외부에서 동일 프롬프트로 받은 Grok JSON 확보) → [부록 A](#부록-a--grok-재현-하니스) 하니스로 C1·C2·C3 **동일 입력** 생성 → §3·§5 표 채움 → 최종 모델 재확정.
+- 재개 결과 처리: Grok이 명백히 우수하면 기본 모델 교체, 아니면 Claude 유지. **어느 경우든 코드 변경은 `generateQuestions()` 한 곳 교체로 끝난다**(아래 설계 원칙).
+
+**교체 가능성(설계 원칙) — 모델은 함수 하나로 갈아끼운다:**
+- 모델 호출은 `src/lib/ai.ts`의 `generateQuestions(input): Promise<GeneratedQuestion[]>` **단일 진입점**에 격리돼 있다. 화면·라우트(`/api/ai/generate`)·검증(`validateQuestion`)·타입(`GeneratedQuestion`)은 모델과 무관하게 유지된다.
+- 따라서 Claude 실연결도, 추후 Grok 합류도 **이 함수 내부 구현만 교체/분기**하면 된다(예: `provider` 값에 따라 Claude/Grok 호출). 호출부는 손대지 않는다.
+- 즉 "Claude로 먼저 출시 → 나중에 Grok 비교 추가"가 **호출부 변경 없이** 가능한 구조다.
+
+**다음 단계(별도 작업):** `generateQuestions()`의 mock → Claude 실호출 연결. **본 단계에서 mock 코드(`src/lib/ai.ts`)는 변경하지 않았다.**
+
+---
+
+## 7. 개선된 확정 프롬프트 제안
+
+baseline(프롬프트만, 성취기준 미주입)에서도 Claude는 합격선을 넘었지만, **정확도·일관성을 더 끌어올리기 위한** 보강을 제안한다. SYSTEM/USER 원본 골격은 유지하고 아래만 추가한다(원본은 그대로 보존).
+
+1. **성취기준 실제 주입(가장 권장).** 현재 `prisma/seed.ts`의 `achievementStandard`가 비어 있다. 2022 개정 성취기준 코드·문구를 시드에 채우고 USER 프롬프트의 `{{ACHIEVEMENT_STANDARD}}`에 그대로 주입하면 범위 이탈 가능성을 구조적으로 차단한다. (TASK 0 지시문도 "프롬프트만으로 부족하면 성취기준 주입" 명시)
+2. **SYSTEM에 보기 형식 규칙 1줄 추가:** "객관식 4개 보기는 자릿수·단위·표기 형식을 동일하게 맞춘다(예: 모두 세 자리 수, 모두 'mL' 단위)." → §5에서 관찰된 보기 길이 편차 해소.
+3. **자기검산 강제(품질 가드 보완):** SYSTEM에 "각 문항의 정답을 생성 직후 반대로 계산해 검산하고, 불일치 시 수정한 최종값만 출력한다." 추가. 단, 출력은 여전히 JSON only(검산 과정은 출력 금지).
+4. **단답형 정답 표기 정책 명문화:** "answerKeywords에는 단위 포함/미포함 표기를 모두 넣는다(예: ['1250','1250 mL','1250mL'])." → 채점 관용도 정책을 프롬프트 레벨에서 고정.
+5. **난이도 정의 구체화(선택):** USER의 난이도 설명에 학기·단원별 예시 연산 범위를 1줄 덧붙이면 '상'에서의 과도한 난이도(범위 이탈) 위험을 줄인다.
+
+> 위 1·3은 `AI_문항생성_프롬프트.md` §6(품질 가드)와도 일관된다. 실제 적용 시 원본 문서에 "v2" 섹션으로 추가 제안 예정(이번 PR 범위 밖).
+
+---
+
+## 부록 A — Grok 재현 하니스
+
+`api.x.ai` 허용 후, 키를 **환경변수로만** 주입해 실행한다(코드·로그 하드코딩 금지). `XAI_API_KEY`는 `.env.local`(gitignore) 또는 셸 환경에 둔다.
+
+```bash
+# 키는 저장소 밖에 두고 env로만 전달 (예시)
+XAI_API_KEY="$(cat /path/to/key)" node /tmp/grok-compare.mjs
+```
+
+```js
+// /tmp/grok-compare.mjs  (저장소에 커밋하지 않는 일회성 검증 하니스)
+// SYSTEM/USER 프롬프트는 AI_문항생성_프롬프트.md 원문을 그대로 사용한다.
+const KEY = process.env.XAI_API_KEY;
+if (!KEY) throw new Error("XAI_API_KEY 환경변수가 필요합니다.");
+
+const SYSTEM = `당신은 대한민국 초등학교 수학 평가 문항 출제 전문가입니다.
+2022 개정 교육과정을 따르며, 초등학교 3학년 학생의 인지 수준에 맞는
+단원평가 문항을 출제합니다.
+[출제 원칙] ...(AI_문항생성_프롬프트.md §2 전문을 그대로 붙여넣기)...
+[출력 형식]
+- 반드시 유효한 JSON만 출력한다. 코드펜스나 설명 문장을 절대 덧붙이지 않는다.`;
+
+function userPrompt({ term, unit, std, count, difficulty, type }) {
+  // AI_문항생성_프롬프트.md §3 USER 템플릿의 {{변수}} 치환본
+  return `다음 조건으로 초등학교 3학년 수학 단원평가 문항을 만들어 주세요.
+- 학년/학기: 3학년 ${term}학기
+- 단원: ${unit}
+- 성취기준(참고): ${std}
+- 문항 수: ${count}개
+- 난이도: ${difficulty}
+- 유형: ${type}
+... (JSON 스키마 부분도 원문 그대로) ...`;
+}
+
+const CASES = [
+  { term: 2, unit: "곱셈", std: "(제공되지 않음)", count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
+  { term: 2, unit: "나눗셈", std: "(제공되지 않음)", count: 3, difficulty: "HARD", type: "MULTIPLE_CHOICE" },
+  { term: 2, unit: "들이와 무게", std: "(제공되지 않음)", count: 3, difficulty: "MEDIUM", type: "SHORT_ANSWER" },
+];
+
+for (const c of CASES) {
+  const res = await fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "grok-3", // 허용 후 GET /v1/models 로 실제 사용 가능한 모델명 확인
+      temperature: 0.4,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: userPrompt(c) },
+      ],
+    }),
+  });
+  console.log(`\n===== ${c.unit} / ${c.count}문항 / ${c.difficulty} / ${c.type} =====`);
+  console.log(JSON.stringify(await res.json(), null, 2));
+}
+```
+
+> 차단 확인 로그: `GET https://api.x.ai/v1/models` → `403 Host not in allowlist` (2026-05-30, 본 환경).
+> 같은 시점 `api.anthropic.com`(401, 인증만), `api.github.com`은 도달 가능 → 호스트 단위 허용목록 정책으로 판단.
