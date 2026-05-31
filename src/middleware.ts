@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { type NextRequest, NextResponse } from "next/server";
+import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
 
 const isPublic = createRouteMatcher([
   "/",
@@ -7,20 +7,18 @@ const isPublic = createRouteMatcher([
   "/api/play(.*)",
 ]);
 
-// clerkMiddleware가 키 없을 때 던지는 에러를 외부에서 catch
 const clerk = clerkMiddleware(async (auth, req) => {
   if (!isPublic(req)) {
     await auth.protect();
   }
 });
 
-export async function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest, event: NextFetchEvent) {
   try {
-    // clerk() 반환값이 NextResponse | void 일 수 있음
-    const res = await (clerk as (req: NextRequest) => Promise<NextResponse | void>)(req);
+    const res = await clerk(req, event);
     return res ?? NextResponse.next();
   } catch {
-    // Clerk 키 미설정 또는 기타 에러 → 그냥 통과 (사이트 다운 방지)
+    // Clerk 키 미설정 등 초기화 실패 시 통과
     return NextResponse.next();
   }
 }
