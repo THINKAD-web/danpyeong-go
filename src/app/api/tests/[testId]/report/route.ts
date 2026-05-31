@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import path from "path";
 import { currentTeacher } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -13,18 +14,13 @@ import {
 import { createElement } from "react";
 import { computeTestStats } from "@/lib/stats";
 
-// NanumGothic — 한글 지원 폰트 (Google Fonts CDN)
+// NanumGothic — 로컬 TTF (public/fonts/) 참조 → 서버리스 환경에서 CDN fetch 불필요
+const fontsDir = path.join(process.cwd(), "public", "fonts");
 Font.register({
   family: "NanumGothic",
   fonts: [
-    {
-      src: "https://fonts.gstatic.com/s/nanumgothic/v21/PN_3Rfi-oW3hYwmKDpxS7F_z-7Vd.ttf",
-      fontWeight: "normal",
-    },
-    {
-      src: "https://fonts.gstatic.com/s/nanumgothic/v21/PN_oRfi-oW3hYwmKDpxS7F_LQv37zlEn14YEUQ.ttf",
-      fontWeight: "bold",
-    },
+    { src: path.join(fontsDir, "NanumGothic.ttf"),     fontWeight: "normal" },
+    { src: path.join(fontsDir, "NanumGothicBold.ttf"), fontWeight: "bold"   },
   ],
 });
 
