@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { currentTeacher } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { TestActions } from "./TestActions";
 
 export const dynamic = "force-dynamic";
 
@@ -107,14 +108,7 @@ export default async function TeacherDashboard() {
                     문항 {t.questionCount}개 · 응시 {t.attemptCount}명
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <button className="card bg-white px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5">
-                    결과 보기
-                  </button>
-                  <button className="card bg-sun/40 px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5">
-                    공유
-                  </button>
-                </div>
+                <TestActions testId={t.id} status={t.status} shareToken={t.shareToken} />
               </div>
             );
           })

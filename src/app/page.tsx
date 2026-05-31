@@ -30,7 +30,7 @@ export default function Home() {
             href="/teacher"
             className="card inline-block bg-brand px-8 py-4 text-lg font-bold text-white transition hover:-translate-y-1"
           >
-            👩‍🏫 교사로 시작하기
+            <span>👩‍🏫</span> 교사로 시작하기
           </Link>
           <Link
             href="/play"
