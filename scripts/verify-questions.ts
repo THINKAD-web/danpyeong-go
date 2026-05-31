@@ -6,6 +6,9 @@
  * 전수 검산하여 결함 여부를 표로 출력.
  */
 
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
 import { generateQuestions, validateQuestion } from "../src/lib/ai";
 import type { GenerateInput, GeneratedQuestion } from "../src/lib/ai";
 
