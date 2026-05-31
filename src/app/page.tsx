@@ -40,7 +40,7 @@ export default function Home() {
           </Link>
         </div>
         <p className="mt-4 text-sm text-ink/40">
-          * 현재는 데모(mock) 버전입니다. 실제 DB·AI·인증은 배포 후 연결됩니다.
+          * 교사 로그인 후 이용 가능합니다. 학생은 코드 입력만으로 응시할 수 있어요.
         </p>
       </section>
 

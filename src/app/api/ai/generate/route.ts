@@ -28,9 +28,8 @@ export async function POST(req: NextRequest) {
     // DB 저장 (best-effort: 실패해도 생성 결과는 반환)
     let savedCount = 0;
     try {
-      const teacher = currentTeacher();
+      const teacher = await currentTeacher();
 
-      // 데모 교사 User가 없으면 upsert (Clerk 연동 전 임시 처리)
       const author = await prisma.user.upsert({
         where: { clerkId: teacher.id },
         update: {},

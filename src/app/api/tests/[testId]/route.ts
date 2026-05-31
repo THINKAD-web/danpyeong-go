@@ -20,7 +20,7 @@ export async function PATCH(
       return NextResponse.json({ error: "입력값이 올바르지 않습니다." }, { status: 400 });
     }
 
-    const teacher = currentTeacher();
+    const teacher = await currentTeacher();
     const author = await prisma.user.findUnique({ where: { clerkId: teacher.id } });
     if (!author) return NextResponse.json({ error: "권한 없음" }, { status: 403 });
 
