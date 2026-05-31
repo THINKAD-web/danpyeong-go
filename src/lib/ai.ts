@@ -1,7 +1,8 @@
 // ============================================================
 // AI 문항 생성 — Claude API 연동
-// 모델: claude-haiku-4-5-20251001 (비용·속도 최적)
+// 모델: claude-sonnet-4-6 (정확도 우선)
 // 프롬프트: AI_문항생성_프롬프트.md SYSTEM/USER 원문 그대로 사용
+// 2-pass: 생성 → 자기검산(isCorrect·계산 일치 교정)
 // ============================================================
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -55,20 +56,27 @@ const SYSTEM_PROMPT = `당신은 대한민국 초등학교 수학 평가 문항 
 [출력 형식]
 - 반드시 유효한 JSON만 출력한다. 코드펜스(\`\`\`)나 설명 문장을 절대 덧붙이지 않는다.`;
 
-const DIFFICULTY_LABEL: Record<GenerateInput["difficulty"], string> = {
-  EASY: "하",
-  MEDIUM: "중",
-  HARD: "상",
-};
+const VERIFY_SYSTEM_PROMPT = `당신은 초등학교 수학 문항 검수 전문가입니다.
+주어진 JSON 문항 배열을 검토하여 오류를 교정하고 올바른 JSON만 반환합니다.
 
-const TYPE_LABEL: Record<GenerateInput["type"], string> = {
-  MULTIPLE_CHOICE: "MULTIPLE_CHOICE",
-  SHORT_ANSWER: "SHORT_ANSWER",
-};
+[검수 항목]
+1. 객관식(MULTIPLE_CHOICE): 각 선택지를 직접 계산하여 실제로 가장 알맞은 정답에만 isCorrect: true를 표시한다.
+   - 현재 isCorrect 표시를 신뢰하지 말고, 반드시 직접 계산으로 확인한다.
+   - isCorrect: true가 정확히 1개인지 확인한다.
+2. 해설이 실제 정답 선택지와 일치하는지 확인하고, 불일치하면 해설을 교정한다.
+3. 단답형(SHORT_ANSWER): answerKeywords가 실제 계산 결과와 일치하는지 확인한다.
+4. 문제가 풀 수 없거나(예: 나누어 떨어지지 않는 나눗셈) 정답이 선택지에 없으면 해당 문항을 제거한다.
+
+[출력 형식]
+- 반드시 유효한 JSON만 출력한다. 코드펜스나 설명 문장을 절대 덧붙이지 않는다.
+- 스키마: { "questions": [ ...교정된 문항 배열... ] }`;
+
+function stripFences(text: string): string {
+  return text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+}
 
 function buildUserPrompt(input: GenerateInput): string {
-  const diffLabel = DIFFICULTY_LABEL[input.difficulty];
-  const typeLabel = TYPE_LABEL[input.type];
+  const diffLabel = { EASY: "하", MEDIUM: "중", HARD: "상" }[input.difficulty];
   return `다음 조건으로 초등학교 3학년 수학 단원평가 문항을 만들어 주세요.
 
 - 학년/학기: 3학년 ${input.term}학기
@@ -76,7 +84,7 @@ function buildUserPrompt(input: GenerateInput): string {
 - 성취기준(참고): 해당 단원의 핵심 계산 및 개념 이해
 - 문항 수: ${input.count}개
 - 난이도: ${diffLabel}  (하=기초 계산/개념 확인, 중=개념 적용, 상=문장제·복합 사고)
-- 유형: ${typeLabel}  (MULTIPLE_CHOICE=객관식 4지선다 / SHORT_ANSWER=단답형)
+- 유형: ${input.type}  (MULTIPLE_CHOICE=객관식 4지선다 / SHORT_ANSWER=단답형)
 
 아래 JSON 스키마로만 응답하세요:
 
@@ -103,49 +111,75 @@ function buildUserPrompt(input: GenerateInput): string {
 - "answerKeywords"에 정답으로 인정할 표현을 배열로 (예: ["12", "12개"])`;
 }
 
-async function callClaude(input: GenerateInput): Promise<GeneratedQuestion[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.");
+function buildVerifyPrompt(questions: GeneratedQuestion[]): string {
+  return `아래 문항들을 검수하고, 오류를 교정한 JSON을 반환하세요.
+각 선택지를 직접 계산하여 isCorrect가 올바른 정답에 붙어 있는지 반드시 확인하세요.
 
-  const client = new Anthropic({ apiKey });
+${JSON.stringify({ questions }, null, 2)}`;
+}
+
+async function callClaude(
+  client: Anthropic,
+  systemPrompt: string,
+  userPrompt: string
+): Promise<GeneratedQuestion[]> {
   const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 4096,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildUserPrompt(input) }],
+    model: "claude-sonnet-4-6",
+    max_tokens: 8192,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
   });
 
   const rawText = response.content[0].type === "text" ? response.content[0].text : "";
-  // 코드펜스(```json ... ```) 제거
-  const raw = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-  const parsed = JSON.parse(raw) as { questions: GeneratedQuestion[] };
+  const parsed = JSON.parse(stripFences(rawText)) as { questions: GeneratedQuestion[] };
   return parsed.questions;
 }
 
 /**
  * 문항 생성 진입점.
- * JSON 파싱 실패 시 1회 재시도. 그래도 실패하면 에러를 throw.
+ * Pass 1: 문항 생성 (JSON 파싱 실패 시 1회 재시도)
+ * Pass 2: 자기검산 — isCorrect·계산 불일치 교정
  */
 export async function generateQuestions(
   input: GenerateInput
 ): Promise<GeneratedQuestion[]> {
   GenerateInputSchema.parse(input);
 
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.");
+
+  const client = new Anthropic({ apiKey });
+
+  // Pass 1: 생성
+  let questions: GeneratedQuestion[] | undefined;
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      return await callClaude(input);
+      questions = await callClaude(client, SYSTEM_PROMPT, buildUserPrompt(input));
+      break;
     } catch (e) {
       lastError = e;
-      if (attempt === 0) {
-        // 재시도 전 잠시 대기
-        await new Promise((r) => setTimeout(r, 1000));
-      }
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1000));
     }
   }
-  throw new Error(
-    `문항 생성 실패 (2회 시도): ${lastError instanceof Error ? lastError.message : String(lastError)}`
-  );
+  if (!questions) {
+    throw new Error(
+      `문항 생성 실패 (2회 시도): ${lastError instanceof Error ? lastError.message : String(lastError)}`
+    );
+  }
+
+  // Pass 2: 자기검산 (생성 결과를 검수 모델에 재투입)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      questions = await callClaude(client, VERIFY_SYSTEM_PROMPT, buildVerifyPrompt(questions));
+      break;
+    } catch {
+      if (attempt === 1) break; // 검산 실패 시 1차 결과 그대로 반환
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+
+  return questions;
 }
 
 /** 객관식 정답 1개 / 보기 4개 검증 */
