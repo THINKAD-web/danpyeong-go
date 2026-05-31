@@ -27,20 +27,38 @@ async function getTeacherData() {
       title: true,
       status: true,
       shareToken: true,
-      _count: { select: { questions: true, attempts: true } },
+      _count: { select: { questions: true } },
+      attempts: {
+        where: { status: "SUBMITTED" },
+        select: { score: true, maxScore: true },
+      },
     },
   });
 
   return {
     teacher,
-    tests: tests.map((t) => ({
-      id: t.id,
-      title: t.title,
-      status: t.status as "DRAFT" | "PUBLISHED" | "CLOSED",
-      shareToken: t.shareToken,
-      questionCount: t._count.questions,
-      attemptCount: t._count.attempts,
-    })),
+    tests: tests.map((t) => {
+      const submitted = t.attempts;
+      const attemptCount = submitted.length;
+      const avgScore =
+        attemptCount > 0
+          ? Math.round(
+              submitted.reduce((s, a) => {
+                const max = a.maxScore ?? 1;
+                return s + (max > 0 ? ((a.score ?? 0) / max) * 100 : 0);
+              }, 0) / attemptCount
+            )
+          : null;
+      return {
+        id: t.id,
+        title: t.title,
+        status: t.status as "DRAFT" | "PUBLISHED" | "CLOSED",
+        shareToken: t.shareToken,
+        questionCount: t._count.questions,
+        attemptCount,
+        avgScore,
+      };
+    }),
   };
 }
 
@@ -49,6 +67,11 @@ export default async function TeacherDashboard() {
 
   const published = tests.filter((t) => t.status === "PUBLISHED").length;
   const totalAttempts = tests.reduce((s, t) => s + t.attemptCount, 0);
+  const scoresWithData = tests.filter((t) => t.avgScore !== null);
+  const overallAvg =
+    scoresWithData.length > 0
+      ? Math.round(scoresWithData.reduce((s, t) => s + (t.avgScore ?? 0), 0) / scoresWithData.length)
+      : null;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -72,10 +95,11 @@ export default async function TeacherDashboard() {
       </div>
 
       {/* 통계 카드 */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-4">
         <Stat label="전체 평가" value={`${tests.length}개`} />
         <Stat label="진행 중" value={`${published}개`} />
         <Stat label="총 응시" value={`${totalAttempts}회`} />
+        <Stat label="전체 평균" value={overallAvg !== null ? `${overallAvg}점` : "—"} />
       </div>
 
       {/* 테스트 목록 */}
@@ -106,6 +130,7 @@ export default async function TeacherDashboard() {
                   </div>
                   <p className="mt-1 text-sm text-ink/60">
                     문항 {t.questionCount}개 · 응시 {t.attemptCount}명
+                    {t.avgScore !== null && ` · 평균 ${t.avgScore}점`}
                   </p>
                 </div>
                 <TestActions testId={t.id} status={t.status} shareToken={t.shareToken} />

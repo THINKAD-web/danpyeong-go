@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -42,6 +43,12 @@ export function TestActions({
 
   return (
     <div className="flex flex-wrap gap-2">
+      <Link
+        href={`/teacher/test/${testId}/results`}
+        className="card bg-white px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5"
+      >
+        결과 보기
+      </Link>
       {status === "DRAFT" && (
         <button
           onClick={() => changeStatus("PUBLISHED")}
