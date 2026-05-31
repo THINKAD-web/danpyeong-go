@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { computeTestStats } from "@/lib/stats";
 import { ResultsClient } from "./ResultsClient";
+import { DownloadButtons } from "./DownloadButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,13 @@ export default async function ResultsPage({
         <span className="font-bold text-ink">{stats.title}</span>
       </nav>
 
-      <h1 className="font-display text-3xl font-bold">결과 분석</h1>
-      <p className="mt-1 text-sm text-ink/50">{stats.title}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold">결과 분석</h1>
+          <p className="mt-1 text-sm text-ink/50">{stats.title}</p>
+        </div>
+        <DownloadButtons stats={stats} testId={testId} />
+      </div>
 
       {/* 요약 카드 */}
       <div className="mt-6 grid gap-4 sm:grid-cols-4">
