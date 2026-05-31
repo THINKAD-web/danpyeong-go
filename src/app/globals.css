@@ -5,6 +5,11 @@
 :root {
   --font-display: "Gaegu", "Pretendard", system-ui, sans-serif;
   --font-sans: "Pretendard", system-ui, sans-serif;
+  color-scheme: light;
+}
+
+html {
+  color: #1a1a2e;
 }
 
 body {
@@ -29,6 +34,7 @@ body {
 /* 카드 공통 */
 .card {
   background: #fff;
+  color: #1a1a2e;
   border: 2px solid #1a1a2e;
   border-radius: 14px;
   box-shadow: 4px 4px 0 #1a1a2e;
