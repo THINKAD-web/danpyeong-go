@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
 import { currentTeacher } from "@/lib/auth";
+import { TeacherUserMenu } from "@/components/TeacherUserMenu";
 import { prisma } from "@/lib/prisma";
 import { TestActions } from "./TestActions";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
@@ -93,7 +93,7 @@ export default async function TeacherDashboard() {
             도움말
           </Link>
           <span className="text-sm text-ink/60">{teacher.name} 선생님</span>
-          <UserButton />
+          <TeacherUserMenu />
         </div>
       </nav>
 

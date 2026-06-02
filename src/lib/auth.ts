@@ -1,8 +1,10 @@
 // ============================================================
-// Clerk 실인증 — @clerk/nextjs v6
+// Clerk 실인증 — @clerk/nextjs v7
 // currentTeacher()는 서버 전용(Server Component / API Route)
 // 학생 /play 경로는 인증 없이 그대로 유지
 // ============================================================
+
+import "server-only";
 
 import { auth, currentUser } from "@clerk/nextjs/server";
 

@@ -213,7 +213,7 @@ export default function NewTestPage() {
             <h2 className="font-display text-2xl font-bold">생성된 문항 {questions.length}개</h2>
             <button
               onClick={() => setShowSaveModal(true)}
-              className="card bg-mint/30 px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5"
+              className="card bg-mint/30 px-4 py-2 text-sm font-bold text-ink transition hover:-translate-y-0.5"
             >
               테스트로 저장
             </button>
@@ -313,16 +313,6 @@ export default function NewTestPage() {
         </div>
       )}
 
-      <style>{`
-        .select {
-          width: 100%;
-          border: 2px solid #1a1a2e;
-          border-radius: 10px;
-          padding: 0.5rem 0.75rem;
-          background: #fff;
-          font-weight: 600;
-        }
-      `}</style>
     </main>
   );
 }
