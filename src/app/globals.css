@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
   --font-display: "Gaegu", "Pretendard", system-ui, sans-serif;
   --font-sans: "Pretendard", system-ui, sans-serif;
+}
+
+html {
+  color: #1a1a2e;
 }
 
 body {
