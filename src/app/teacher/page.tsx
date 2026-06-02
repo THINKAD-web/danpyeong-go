@@ -88,12 +88,20 @@ export default async function TeacherDashboard() {
 
       <div className="flex items-center justify-between">
         <h1 className="font-display text-4xl font-bold">내 단원평가</h1>
-        <Link
-          href="/teacher/test/new"
-          className="card bg-brand px-5 py-3 font-bold text-white transition hover:-translate-y-1"
-        >
-          + AI로 새로 만들기
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/teacher/admin/units"
+            className="card px-4 py-2.5 text-sm font-medium text-ink/70 hover:text-ink border border-ink/15 hover:border-ink/30 transition"
+          >
+            단원 관리
+          </Link>
+          <Link
+            href="/teacher/test/new"
+            className="card bg-brand px-5 py-3 font-bold text-white transition hover:-translate-y-1"
+          >
+            + AI로 새로 만들기
+          </Link>
+        </div>
       </div>
 
       {/* 통계 카드 */}

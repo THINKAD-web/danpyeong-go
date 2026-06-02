@@ -66,6 +66,10 @@ model Unit {
   name         String // 예: "곱셈"
   // 2022 개정 교육과정 성취기준 코드/설명 → AI 프롬프트 컨텍스트로 사용
   achievementStandard String? @db.Text
+  // AI 문항 생성 제약 — 화면에서 편집 가능. null 이면 ai-shared.ts 기본값 사용.
+  constraints  String?  @db.Text
+  // soft-delete: 기존 문항이 있는 단원을 실수로 삭제하는 것 방지
+  isArchived   Boolean  @default(false)
 
   questions Question[]
 
