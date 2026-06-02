@@ -170,9 +170,40 @@ export default function NewTestPage() {
           disabled={loading || unitsLoading || !!unitsError || !unitId}
           className="card w-full bg-brand py-3 font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-50"
         >
-          {loading ? "생성 중…" : "✨ AI로 문항 생성"}
+          {loading ? "AI가 만드는 중…" : "✨ AI로 문항 생성"}
         </button>
-        {error && <p className="text-sm text-coral">{error}</p>}
+
+        {/* AI 생성 로딩 안내 */}
+        {loading && (
+          <div className="rounded-xl border-2 border-brand/30 bg-brand/5 px-5 py-4 text-center">
+            <div className="flex items-center justify-center gap-1.5">
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="h-2.5 w-2.5 rounded-full bg-brand"
+                  style={{ animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }}
+                />
+              ))}
+            </div>
+            <p className="mt-2 text-sm font-bold text-brand">AI가 문항을 만들고 있어요</p>
+            <p className="mt-0.5 text-xs text-ink/50">보통 30초~2분 소요돼요. 잠시만 기다려 주세요.</p>
+            <style>{`@keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:.4} 40%{transform:scale(1);opacity:1} }`}</style>
+          </div>
+        )}
+
+        {/* 에러 + 재시도 */}
+        {error && !loading && (
+          <div className="flex items-center gap-3 rounded-xl border-2 border-coral/30 bg-coral/5 px-4 py-3">
+            <p className="flex-1 text-sm font-bold text-coral">{error}</p>
+            <button
+              onClick={handleGenerate}
+              disabled={!currentUnit}
+              className="shrink-0 rounded-lg border-2 border-coral px-3 py-1.5 text-xs font-bold text-coral hover:bg-coral hover:text-white transition"
+            >
+              재시도
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 생성 결과 */}

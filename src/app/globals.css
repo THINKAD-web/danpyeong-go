@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
   --font-display: "Gaegu", "Pretendard", system-ui, sans-serif;
   --font-sans: "Pretendard", system-ui, sans-serif;
+}
+
+html {
+  color: #1a1a2e;
 }
 
 body {
@@ -32,4 +37,14 @@ body {
   border: 2px solid #1a1a2e;
   border-radius: 14px;
   box-shadow: 4px 4px 0 #1a1a2e;
+}
+
+/* PWA safe-area (노치·홈바 대응) */
+.safe-top    { padding-top:    env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* 응시 화면 전용: 모바일 키보드가 올라와도 스크롤 가능하도록 */
+.play-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }

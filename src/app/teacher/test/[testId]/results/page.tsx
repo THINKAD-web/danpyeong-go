@@ -52,9 +52,17 @@ export default async function ResultsPage({
       </div>
 
       {stats.totalAttempts === 0 ? (
-        <div className="card mt-10 p-10 text-center text-ink/40">
-          <p className="text-lg font-bold">아직 응시한 학생이 없어요</p>
-          <p className="mt-1 text-sm">테스트를 배포하고 학생들이 응시하면 분석이 표시됩니다.</p>
+        <div className="card mt-10 px-8 py-14 text-center">
+          <div className="font-display text-5xl font-bold text-ink/10 select-none">0명</div>
+          <p className="mt-4 text-lg font-bold text-ink">아직 응시한 학생이 없어요</p>
+          <p className="mt-2 text-sm text-ink/50 max-w-xs mx-auto">
+            테스트를 배포하고 학생들이 응시하면<br />문항별 정답률·점수 분포가 표시돼요.
+          </p>
+          <div className="mt-6 text-xs text-ink/30 flex items-center justify-center gap-2">
+            <span className="inline-block h-px w-8 bg-ink/10" />
+            학생에게 링크를 공유하거나 코드를 알려주세요
+            <span className="inline-block h-px w-8 bg-ink/10" />
+          </div>
         </div>
       ) : (
         <ResultsClient stats={stats} />

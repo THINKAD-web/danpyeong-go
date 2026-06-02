@@ -1,0 +1,29 @@
+{
+  "name": "단평GO",
+  "short_name": "단평GO",
+  "description": "초등 단원평가 AI 응시 앱",
+  "start_url": "/play",
+  "display": "standalone",
+  "background_color": "#fdfcf7",
+  "theme_color": "#3d5af1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

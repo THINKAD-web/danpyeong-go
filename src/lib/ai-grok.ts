@@ -1,17 +1,12 @@
 // ============================================================
-// AI 문항 생성 — Claude API 연동 (구조적 정답 보장)
-// 모델: claude-sonnet-4-6
+// AI 문항 생성 — Grok (xAI) API 연동
+// 모델: grok-3  (OpenAI-compatible API, base: https://api.x.ai/v1)
 //
-// 설계 원칙 (stem-정답 불일치 구조적 차단):
-//   Pass 1: 모델은 stem·correctValue·distractors·explanation만 생성.
-//            isCorrect 플래그를 모델에게 맡기지 않는다.
-//   Pass 2: 모델이 stem을 독립적으로 풀어 correctValue 검증·교정.
-//            성립 불가 문항(나머지≠0 등) → 제거.
-//   보충:   Pass 2에서 제거된 수만큼 재생성 (최대 2라운드).
-//   조립:   코드가 correctValue 기준으로 isCorrect를 기계적으로 부여.
+// Claude(ai.ts)와 동일한 프롬프트·검산·재생성 로직 사용.
+// 모델 클라이언트만 교체 — 공정 비교 보장.
 // ============================================================
 
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import {
   GenerateInputSchema,
   GenerateInput,
@@ -27,29 +22,33 @@ import {
   buildVerifyPrompt,
 } from "./ai-shared";
 
-export { GenerateInputSchema, validateQuestion } from "./ai-shared";
-export type { GenerateInput, GeneratedChoice, GeneratedQuestion } from "./ai-shared";
+export { validateQuestion } from "./ai-shared";
+export type { GenerateInput, GeneratedQuestion } from "./ai-shared";
+
+export const GROK_MODEL = "grok-3";
 
 // ── API 호출 ───────────────────────────────────────────────
 
-async function callClaude(
-  client: Anthropic,
+async function callGrok(
+  client: OpenAI,
   systemPrompt: string,
   userPrompt: string
 ): Promise<RawQuestion[]> {
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
+  const response = await client.chat.completions.create({
+    model: GROK_MODEL,
     max_tokens: 8192,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
   });
-  const rawText = response.content[0].type === "text" ? response.content[0].text : "";
+  const rawText = response.choices[0]?.message?.content ?? "";
   const parsed = JSON.parse(stripFences(rawText)) as { questions: RawQuestion[] };
   return parsed.questions;
 }
 
 async function generateAndVerify(
-  client: Anthropic,
+  client: OpenAI,
   input: GenerateInput,
   count: number
 ): Promise<RawQuestion[]> {
@@ -58,7 +57,7 @@ async function generateAndVerify(
   let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      raw = await callClaude(client, SYSTEM_PROMPT, buildUserPrompt(input, count));
+      raw = await callGrok(client, SYSTEM_PROMPT, buildUserPrompt(input, count));
       break;
     } catch (e) {
       lastErr = e;
@@ -74,7 +73,7 @@ async function generateAndVerify(
   if (input.type === "MULTIPLE_CHOICE") {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        raw = await callClaude(client, VERIFY_SYSTEM_PROMPT, buildVerifyPrompt(raw));
+        raw = await callGrok(client, VERIFY_SYSTEM_PROMPT, buildVerifyPrompt(raw));
         break;
       } catch {
         if (attempt === 0) await new Promise((r) => setTimeout(r, 1000));
@@ -88,17 +87,17 @@ async function generateAndVerify(
 // ── 공개 API ──────────────────────────────────────────────
 
 /**
- * 문항 생성 진입점 (Claude).
- * Pass 1 → Pass 2 검증·교정 → 재생성 최대 2라운드 → 조립
+ * 문항 생성 진입점 (Grok).
+ * Claude와 동일 로직 — 모델만 grok-3으로 교체.
  */
-export async function generateQuestions(
+export async function generateQuestionsGrok(
   input: GenerateInput
 ): Promise<GeneratedQuestion[]> {
   GenerateInputSchema.parse(input);
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.");
-  const client = new Anthropic({ apiKey });
+  const apiKey = process.env.XAI_API_KEY;
+  if (!apiKey) throw new Error("XAI_API_KEY 환경변수가 설정되지 않았습니다.");
+  const client = new OpenAI({ apiKey, baseURL: "https://api.x.ai/v1" });
 
   let accepted: RawQuestion[] = await generateAndVerify(client, input, input.count);
 
