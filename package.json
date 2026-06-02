@@ -24,6 +24,7 @@
     "@prisma/client": "^6.2.1",
     "@react-pdf/renderer": "^4.5.1",
     "next": "^15.5.18",
+    "openai": "^6.41.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.8.1",
