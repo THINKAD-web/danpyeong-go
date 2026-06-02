@@ -12,6 +12,8 @@ export const GenerateInputSchema = z.object({
   count: z.number().int().min(1).max(20),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
   type: z.enum(["MULTIPLE_CHOICE", "SHORT_ANSWER"]),
+  // DB에서 편집된 단원 제약 — 있으면 getUnitConstraints() 기본값 대신 사용
+  unitConstraints: z.string().optional(),
 });
 
 export type GenerateInput = z.infer<typeof GenerateInputSchema>;
@@ -190,7 +192,10 @@ export function assembleMCQ(raw: RawMCQ): GeneratedQuestion {
 export function buildUserPrompt(input: GenerateInput, count = input.count): string {
   const diffLabel = { EASY: "하", MEDIUM: "중", HARD: "상" }[input.difficulty];
   const isMCQ = input.type === "MULTIPLE_CHOICE";
-  const unitConstraints = getUnitConstraints(input.unitName);
+  // DB에 편집된 제약이 있으면 우선 사용, 없으면 unitName 기반 기본값 사용
+  const unitConstraints = input.unitConstraints
+    ? `\n[단원별 주의사항 — 반드시 준수]\n- ${input.unitConstraints}`
+    : getUnitConstraints(input.unitName);
 
   return `다음 조건으로 초등학교 3학년 수학 단원평가 문항을 만들어 주세요.
 

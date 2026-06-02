@@ -20,7 +20,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const questions = await generateQuestions(parsed.data);
+    // DB에서 단원 제약 조회 — 편집된 값이 있으면 hardcode 대신 사용
+    let unitConstraints: string | undefined;
+    try {
+      const unit = await prisma.unit.findUnique({
+        where: { id: parsed.data.unitId },
+        select: { constraints: true },
+      });
+      unitConstraints = unit?.constraints ?? undefined;
+    } catch {
+      // 조회 실패 시 기본값(unitName 기반) 사용
+    }
+
+    const questions = await generateQuestions({ ...parsed.data, unitConstraints });
 
     // 품질 가드: validateQuestion 통과한 문항만 사용
     const valid = questions.filter((q) => validateQuestion(q) === null);
