@@ -282,15 +282,20 @@ async function generateAndVerify(
 ): Promise<RawQuestion[]> {
   // Pass 1: 생성 (JSON 파싱 실패 시 1회 재시도)
   let raw: RawQuestion[] | undefined;
+  let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       raw = await callClaude(client, SYSTEM_PROMPT, buildUserPrompt(input, count));
       break;
-    } catch {
+    } catch (e) {
+      lastErr = e;
       if (attempt === 0) await new Promise((r) => setTimeout(r, 1000));
     }
   }
-  if (!raw) return [];
+  if (!raw) {
+    const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+    throw new Error(`Pass 1 실패: ${msg}`);
+  }
 
   // Pass 2: correctValue 검증·교정·결함 문항 제거 (객관식만)
   if (input.type === "MULTIPLE_CHOICE") {
