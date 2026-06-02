@@ -35,9 +35,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  classrooms Classroom[]
-  questions  Question[] // 이 교사가 생성/저장한 문항
-  tests      Test[]
+  classrooms  Classroom[]
+  questions   Question[]
+  tests       Test[]
+  aiUsageLogs AiUsageLog[]
 
   @@index([clerkId])
 }
@@ -246,4 +247,22 @@ model Answer {
 
   @@unique([attemptId, testQuestionId])
   @@index([attemptId])
+}
+
+// ----------------------------------------------------------
+// AI 사용량 로그 — 비용 방어·관리자 모니터링용 (작업 A)
+// ----------------------------------------------------------
+model AiUsageLog {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  unitId        String?
+  model         String   @default("claude-sonnet-4-6")
+  questionCount Int
+  questionType  String
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }
