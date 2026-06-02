@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { currentTeacher } from "@/lib/auth";
 
 // ── POST /api/tests ────────────────────────────────────────
-// 생성된 문항을 Test + Question + Choice + TestQuestion으로 저장
 const SaveSchema = z.object({
   title: z.string().min(1).max(100),
   questions: z.array(
@@ -14,6 +13,7 @@ const SaveSchema = z.object({
       stem: z.string().min(1),
       explanation: z.string().default(""),
       answerKeywords: z.array(z.string()).default([]),
+      source: z.enum(["AI", "MANUAL"]).default("AI"),
       choices: z.array(
         z.object({ order: z.number(), text: z.string(), isCorrect: z.boolean() })
       ).default([]),
@@ -48,14 +48,9 @@ export async function POST(req: NextRequest) {
 
     const { title, questions, unitId } = parsed.data;
 
-    // 트랜잭션: Test + Question + Choice + TestQuestion 한번에 저장
     const test = await prisma.$transaction(async (tx) => {
       const newTest = await tx.test.create({
-        data: {
-          ownerId: author.id,
-          title,
-          status: "DRAFT",
-        },
+        data: { ownerId: author.id, title, status: "DRAFT" },
       });
 
       for (let i = 0; i < questions.length; i++) {
@@ -66,11 +61,11 @@ export async function POST(req: NextRequest) {
             authorId: author.id,
             type: q.type,
             difficulty: q.difficulty,
-            source: "AI",
+            source: q.source,
             stem: q.stem,
             explanation: q.explanation,
             answerKeywords: q.answerKeywords,
-            isReviewed: false,
+            isReviewed: q.source === "MANUAL",
             choices: {
               create: q.choices.map((c) => ({
                 order: c.order,
@@ -82,12 +77,7 @@ export async function POST(req: NextRequest) {
         });
 
         await tx.testQuestion.create({
-          data: {
-            testId: newTest.id,
-            questionId: question.id,
-            order: i + 1,
-            points: 1,
-          },
+          data: { testId: newTest.id, questionId: question.id, order: i + 1, points: 1 },
         });
       }
 
@@ -105,14 +95,11 @@ export async function POST(req: NextRequest) {
 }
 
 // ── GET /api/tests ─────────────────────────────────────────
-// 현재 교사의 테스트 목록 (대시보드용)
 export async function GET() {
   try {
     const teacher = await currentTeacher();
 
-    const author = await prisma.user.findUnique({
-      where: { clerkId: teacher.id },
-    });
+    const author = await prisma.user.findUnique({ where: { clerkId: teacher.id } });
     if (!author) return NextResponse.json({ tests: [] });
 
     const tests = await prisma.test.findMany({
@@ -124,9 +111,7 @@ export async function GET() {
         status: true,
         shareToken: true,
         createdAt: true,
-        _count: {
-          select: { questions: true, attempts: true },
-        },
+        _count: { select: { questions: true, attempts: true } },
       },
     });
 
