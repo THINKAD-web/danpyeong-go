@@ -3,6 +3,8 @@ import { UserButton } from "@clerk/nextjs";
 import { currentTeacher } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TestActions } from "./TestActions";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { NextStepBanner } from "@/components/NextStepBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +76,12 @@ export default async function TeacherDashboard() {
       ? Math.round(scoresWithData.reduce((s, t) => s + (t.avgScore ?? 0), 0) / scoresWithData.length)
       : null;
 
+  // 상황별 다음 단계 배너 결정
+  const hasDraft = tests.some((t) => t.status === "DRAFT");
+  const hasPublishedWithNoAttempts =
+    tests.some((t) => t.status === "PUBLISHED" && t.attemptCount === 0);
+  const firstPublished = tests.find((t) => t.status === "PUBLISHED");
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
       <nav className="mb-10 flex items-center justify-between">
@@ -81,6 +89,9 @@ export default async function TeacherDashboard() {
           단평<span className="text-coral">GO</span>
         </Link>
         <div className="flex items-center gap-3">
+          <Link href="/teacher/help" className="text-sm text-ink/50 hover:text-ink transition">
+            도움말
+          </Link>
           <span className="text-sm text-ink/60">{teacher.name} 선생님</span>
           <UserButton />
         </div>
@@ -96,49 +107,57 @@ export default async function TeacherDashboard() {
         </Link>
       </div>
 
-      {/* 통계 카드 */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-4">
-        <Stat label="전체 평가" value={`${tests.length}개`} />
-        <Stat label="진행 중" value={`${published}개`} />
-        <Stat label="총 응시" value={`${totalAttempts}회`} />
-        <Stat label="전체 평균" value={overallAvg !== null ? `${overallAvg}점` : "—"} />
-      </div>
+      {/* 통계 카드 — 테스트가 있을 때만 */}
+      {tests.length > 0 && (
+        <div className="mt-8 grid gap-4 sm:grid-cols-4">
+          <Stat label="전체 평가" value={`${tests.length}개`} />
+          <Stat label="진행 중" value={`${published}개`} />
+          <Stat label="총 응시" value={`${totalAttempts}회`} />
+          <Stat label="전체 평균" value={overallAvg !== null ? `${overallAvg}점` : "—"} />
+        </div>
+      )}
 
       {/* 테스트 목록 */}
       <div className="mt-8 space-y-4">
         {tests.length === 0 ? (
-          <div className="card p-10 text-center text-ink/40">
-            <p className="text-lg font-bold">아직 만든 평가가 없어요</p>
-            <p className="mt-1 text-sm">
-              AI로 새로 만들기 버튼을 눌러 첫 단원평가를 만들어 보세요.
-            </p>
-          </div>
+          // 빈 상태 = 첫 사용 온보딩 가이드
+          <OnboardingChecklist />
         ) : (
-          tests.map((t) => {
-            const s = statusLabel[t.status];
-            return (
-              <div
-                key={t.id}
-                className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-bold">{t.title}</h3>
-                    <span
-                      className={`rounded-full border px-2 py-0.5 text-xs font-bold ${s.cls}`}
-                    >
-                      {s.text}
-                    </span>
+          <>
+            {/* 상황별 다음 단계 힌트 배너 */}
+            {hasDraft && !hasPublishedWithNoAttempts && (
+              <NextStepBanner kind="deploy" />
+            )}
+            {hasPublishedWithNoAttempts && (
+              <NextStepBanner kind="share" shareToken={firstPublished?.shareToken} />
+            )}
+
+            {tests.map((t) => {
+              const s = statusLabel[t.status];
+              return (
+                <div
+                  key={t.id}
+                  className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold">{t.title}</h3>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs font-bold ${s.cls}`}
+                      >
+                        {s.text}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-ink/60">
+                      문항 {t.questionCount}개 · 응시 {t.attemptCount}명
+                      {t.avgScore !== null && ` · 평균 ${t.avgScore}점`}
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm text-ink/60">
-                    문항 {t.questionCount}개 · 응시 {t.attemptCount}명
-                    {t.avgScore !== null && ` · 평균 ${t.avgScore}점`}
-                  </p>
+                  <TestActions testId={t.id} status={t.status} shareToken={t.shareToken} />
                 </div>
-                <TestActions testId={t.id} status={t.status} shareToken={t.shareToken} />
-              </div>
-            );
-          })
+              );
+            })}
+          </>
         )}
       </div>
     </main>
