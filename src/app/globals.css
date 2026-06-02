@@ -8,6 +8,10 @@
   --font-sans: "Pretendard", system-ui, sans-serif;
 }
 
+html {
+  color: #1a1a2e;
+}
+
 body {
   background-color: var(--paper, #fdfcf7);
   color: #1a1a2e;
@@ -33,5 +37,4 @@ body {
   border: 2px solid #1a1a2e;
   border-radius: 14px;
   box-shadow: 4px 4px 0 #1a1a2e;
-  color: #1a1a2e;
 }
