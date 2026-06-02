@@ -3,9 +3,25 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { QuestionEditor } from "@/components/QuestionEditor";
 import type { GeneratedQuestion } from "@/lib/ai";
 
 type Unit = { id: string; term: number; order: number; name: string };
+
+const EMPTY_QUESTION: GeneratedQuestion = {
+  type: "MULTIPLE_CHOICE",
+  difficulty: "MEDIUM",
+  stem: "",
+  choices: [
+    { order: 1, text: "", isCorrect: true },
+    { order: 2, text: "", isCorrect: false },
+    { order: 3, text: "", isCorrect: false },
+    { order: 4, text: "", isCorrect: false },
+  ],
+  answerKeywords: [],
+  explanation: "",
+  source: "MANUAL",
+};
 
 export default function NewTestPage() {
   const router = useRouter();
@@ -24,13 +40,14 @@ export default function NewTestPage() {
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // 테스트 저장 상태
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [addingManual, setAddingManual] = useState(false);
+
   const [saveTitle, setSaveTitle] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // 학기 변경 시 단원 목록 재조회
   useEffect(() => {
     setUnitsLoading(true);
     setUnitsError(null);
@@ -54,23 +71,19 @@ export default function NewTestPage() {
     setLoading(true);
     setError(null);
     setQuestions([]);
+    setEditingIdx(null);
+    setAddingManual(false);
     try {
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          unitId,
-          unitName: currentUnit.name,
-          term,
-          count,
-          difficulty,
-          type,
-        }),
+        body: JSON.stringify({ unitId, unitName: currentUnit.name, term, count, difficulty, type }),
       });
       if (!res.ok) throw new Error("생성 실패");
       const data = await res.json();
-      setQuestions(data.questions);
-      // 기본 제목 세팅
+      setQuestions(
+        (data.questions as GeneratedQuestion[]).map((q) => ({ ...q, source: "AI" as const }))
+      );
       setSaveTitle(`${term}학기 ${currentUnit.name} 단원평가`);
     } catch {
       setError("문항 생성에 실패했어요. 다시 시도해 주세요.");
@@ -81,6 +94,19 @@ export default function NewTestPage() {
 
   function removeQuestion(idx: number) {
     setQuestions((qs) => qs.filter((_, i) => i !== idx));
+    if (editingIdx === idx) setEditingIdx(null);
+  }
+
+  function saveEdit(idx: number, updated: GeneratedQuestion) {
+    setQuestions((qs) => qs.map((q, i) => (i === idx ? updated : q)));
+    setEditingIdx(null);
+  }
+
+  function addManualQuestion(q: GeneratedQuestion) {
+    setQuestions((qs) => [...qs, q]);
+    setAddingManual(false);
+    if (!saveTitle)
+      setSaveTitle(currentUnit ? `${term}학기 ${currentUnit.name} 단원평가` : "새 테스트");
   }
 
   async function handleSave() {
@@ -103,9 +129,12 @@ export default function NewTestPage() {
     }
   }
 
+  const canSave = questions.length > 0 && editingIdx === null && !addingManual;
+  const hasQuestionArea = questions.length > 0 || addingManual;
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <nav className="mb-8 flex items-center justify-between">
+      <nav className="mb-8">
         <Link href="/teacher" className="text-sm font-bold text-brand">
           ← 대시보드
         </Link>
@@ -173,7 +202,6 @@ export default function NewTestPage() {
           {loading ? "AI가 만드는 중…" : "✨ AI로 문항 생성"}
         </button>
 
-        {/* AI 생성 로딩 안내 */}
         {loading && (
           <div className="rounded-xl border-2 border-brand/30 bg-brand/5 px-5 py-4 text-center">
             <div className="flex items-center justify-center gap-1.5">
@@ -187,18 +215,17 @@ export default function NewTestPage() {
             </div>
             <p className="mt-2 text-sm font-bold text-brand">AI가 문항을 만들고 있어요</p>
             <p className="mt-0.5 text-xs text-ink/50">보통 30초~2분 소요돼요. 잠시만 기다려 주세요.</p>
-            <style>{`@keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:.4} 40%{transform:scale(1);opacity:1} }`}</style>
+            <style>{`@keyframes bounce{0%,80%,100%{transform:scale(0.6);opacity:.4}40%{transform:scale(1);opacity:1}}`}</style>
           </div>
         )}
 
-        {/* 에러 + 재시도 */}
         {error && !loading && (
           <div className="flex items-center gap-3 rounded-xl border-2 border-coral/30 bg-coral/5 px-4 py-3">
             <p className="flex-1 text-sm font-bold text-coral">{error}</p>
             <button
               onClick={handleGenerate}
               disabled={!currentUnit}
-              className="shrink-0 rounded-lg border-2 border-coral px-3 py-1.5 text-xs font-bold text-coral hover:bg-coral hover:text-white transition"
+              className="shrink-0 rounded-lg border-2 border-coral px-3 py-1.5 text-xs font-bold text-coral transition hover:bg-coral hover:text-white"
             >
               재시도
             </button>
@@ -206,70 +233,143 @@ export default function NewTestPage() {
         )}
       </div>
 
-      {/* 생성 결과 */}
-      {questions.length > 0 && (
+      {/* 문항 없을 때 직접 작성 진입점 */}
+      {!hasQuestionArea && !loading && (
+        <>
+          <button
+            onClick={() => { if (unitId) setAddingManual(true); }}
+            disabled={!unitId || unitsLoading}
+            className="mt-4 w-full rounded-xl border-2 border-dashed border-ink/20 py-3 text-sm font-bold text-ink/40 transition hover:border-brand/50 hover:text-brand disabled:cursor-not-allowed"
+          >
+            또는 직접 문항 추가
+          </button>
+          {addingManual && (
+            <div className="card mt-4 border-dashed p-5">
+              <p className="mb-4 text-sm font-bold text-coral">직접 문항 작성</p>
+              <QuestionEditor
+                initial={{ ...EMPTY_QUESTION }}
+                isNew
+                onSave={addManualQuestion}
+                onCancel={() => setAddingManual(false)}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 문항 목록 */}
+      {hasQuestionArea && (
         <div className="mt-10">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-2xl font-bold">생성된 문항 {questions.length}개</h2>
+            <h2 className="font-display text-2xl font-bold">문항 {questions.length}개</h2>
             <button
-              onClick={() => setShowSaveModal(true)}
-              className="card bg-mint/30 px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5"
+              onClick={() => canSave && setShowSaveModal(true)}
+              disabled={!canSave}
+              className="card bg-mint/30 px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-40"
             >
               테스트로 저장
             </button>
           </div>
-          <p className="mt-1 text-sm text-ink/50">
-            ⚠️ AI 생성 문항입니다. 교육과정 적합성과 정답을 반드시 확인하세요.
-          </p>
+
+          {questions.some((q) => q.source === "AI") && (
+            <p className="mt-1 text-sm text-ink/50">
+              ⚠️ AI 생성 문항이 포함돼 있어요. 교육과정 적합성과 정답을 반드시 확인하세요.
+            </p>
+          )}
 
           <div className="mt-5 space-y-4">
             {questions.map((q, i) => (
               <div key={i} className="card p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="mb-2 flex gap-2 text-xs font-bold">
-                      <span className="rounded-full bg-ink/10 px-2 py-0.5">
-                        {q.type === "MULTIPLE_CHOICE" ? "객관식" : "단답형"}
-                      </span>
-                      <span className="rounded-full bg-sun/30 px-2 py-0.5">
-                        난이도 {q.difficulty === "EASY" ? "하" : q.difficulty === "MEDIUM" ? "중" : "상"}
-                      </span>
-                    </div>
-                    <p className="font-bold">{i + 1}. {q.stem}</p>
-                    {q.type === "MULTIPLE_CHOICE" ? (
-                      <ul className="mt-3 space-y-1">
-                        {q.choices.map((c) => (
-                          <li
-                            key={c.order}
-                            className={`rounded-lg px-3 py-1.5 text-sm ${
-                              c.isCorrect ? "bg-mint/20 font-bold text-green-800" : "bg-ink/5"
-                            }`}
-                          >
-                            {["①", "②", "③", "④"][c.order - 1]} {c.text}
-                            {c.isCorrect && " ✓"}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-3 text-sm">
-                        <span className="font-bold">정답:</span>{" "}
-                        {q.answerKeywords.join(" / ")}
-                      </p>
-                    )}
-                    <p className="mt-3 rounded-lg bg-brand/5 px-3 py-2 text-sm text-ink/70">
-                      💡 {q.explanation}
-                    </p>
+                {editingIdx === i ? (
+                  <div>
+                    <p className="mb-4 text-sm font-bold text-brand">문항 {i + 1} 수정 중</p>
+                    <QuestionEditor
+                      initial={q}
+                      onSave={(updated) => saveEdit(i, updated)}
+                      onCancel={() => setEditingIdx(null)}
+                    />
                   </div>
-                  <button
-                    onClick={() => removeQuestion(i)}
-                    className="shrink-0 rounded-lg border-2 border-coral px-2 py-1 text-xs font-bold text-coral"
-                  >
-                    삭제
-                  </button>
-                </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap gap-2 text-xs font-bold">
+                        <span className="rounded-full bg-ink/10 px-2 py-0.5">
+                          {q.type === "MULTIPLE_CHOICE" ? "객관식" : "단답형"}
+                        </span>
+                        <span className="rounded-full bg-sun/30 px-2 py-0.5">
+                          난이도 {q.difficulty === "EASY" ? "하" : q.difficulty === "MEDIUM" ? "중" : "상"}
+                        </span>
+                        {q.source === "MANUAL" && (
+                          <span className="rounded-full bg-coral/20 px-2 py-0.5 text-coral">직접 작성</span>
+                        )}
+                      </div>
+                      <p className="font-bold">{i + 1}. {q.stem}</p>
+                      {q.type === "MULTIPLE_CHOICE" ? (
+                        <ul className="mt-3 space-y-1">
+                          {q.choices.map((c) => (
+                            <li
+                              key={c.order}
+                              className={`rounded-lg px-3 py-1.5 text-sm ${
+                                c.isCorrect ? "bg-mint/20 font-bold text-green-800" : "bg-ink/5"
+                              }`}
+                            >
+                              {["①", "②", "③", "④"][c.order - 1]} {c.text}
+                              {c.isCorrect && " ✓"}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-3 text-sm">
+                          <span className="font-bold">정답:</span>{" "}
+                          {q.answerKeywords.join(" / ")}
+                        </p>
+                      )}
+                      {q.explanation && (
+                        <p className="mt-3 rounded-lg bg-brand/5 px-3 py-2 text-sm text-ink/70">
+                          💡 {q.explanation}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-col gap-1.5">
+                      <button
+                        onClick={() => { setEditingIdx(i); setAddingManual(false); }}
+                        className="rounded-lg border-2 border-brand px-2 py-1 text-xs font-bold text-brand transition hover:bg-brand hover:text-white"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => removeQuestion(i)}
+                        className="rounded-lg border-2 border-coral px-2 py-1 text-xs font-bold text-coral transition hover:bg-coral hover:text-white"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
+
+            {addingManual && (
+              <div className="card border-dashed p-5">
+                <p className="mb-4 text-sm font-bold text-coral">직접 문항 작성</p>
+                <QuestionEditor
+                  initial={{ ...EMPTY_QUESTION }}
+                  isNew
+                  onSave={addManualQuestion}
+                  onCancel={() => setAddingManual(false)}
+                />
+              </div>
+            )}
           </div>
+
+          {!addingManual && editingIdx === null && (
+            <button
+              onClick={() => setAddingManual(true)}
+              className="mt-4 w-full rounded-xl border-2 border-dashed border-ink/30 py-3 text-sm font-bold text-ink/50 transition hover:border-brand hover:text-brand"
+            >
+              + 직접 문항 추가
+            </button>
+          )}
         </div>
       )}
 
@@ -287,7 +387,7 @@ export default function NewTestPage() {
                 value={saveTitle}
                 onChange={(e) => setSaveTitle(e.target.value)}
                 placeholder="예: 3-2 곱셈 단원평가"
-                className="mt-1 w-full rounded-xl border-2 border-ink px-3 py-2 font-semibold focus:outline-none focus:border-brand"
+                className="mt-1 w-full rounded-xl border-2 border-ink px-3 py-2 font-semibold focus:border-brand focus:outline-none"
                 autoFocus
               />
             </label>
