@@ -6,6 +6,18 @@
  * 전수 검산하여 결함 여부를 표로 출력.
  */
 
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
+// 키 존재 여부 조기 확인 (값 출력 금지)
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+if (!ANTHROPIC_KEY) {
+  console.error("❌ ANTHROPIC_API_KEY가 설정되지 않았습니다.");
+  console.error("   ~/danpyeong-go/.env.local 파일에 ANTHROPIC_API_KEY=실제키값 을 추가하세요.");
+  process.exit(1);
+}
+console.log(`✅ ANTHROPIC_API_KEY 확인 (len=${ANTHROPIC_KEY.length})`);
+
 import { generateQuestions, validateQuestion } from "../src/lib/ai";
 import type { GenerateInput, GeneratedQuestion } from "../src/lib/ai";
 

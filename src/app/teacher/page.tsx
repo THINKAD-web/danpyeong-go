@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
 import { currentTeacher } from "@/lib/auth";
+import { TeacherUserMenu } from "@/components/TeacherUserMenu";
 import { prisma } from "@/lib/prisma";
 import { TestActions } from "./TestActions";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
@@ -93,18 +93,26 @@ export default async function TeacherDashboard() {
             도움말
           </Link>
           <span className="text-sm text-ink/60">{teacher.name} 선생님</span>
-          <UserButton />
+          <TeacherUserMenu />
         </div>
       </nav>
 
       <div className="flex items-center justify-between">
         <h1 className="font-display text-4xl font-bold">내 단원평가</h1>
-        <Link
-          href="/teacher/test/new"
-          className="card bg-brand px-5 py-3 font-bold text-white transition hover:-translate-y-1"
-        >
-          + AI로 새로 만들기
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/teacher/admin/units"
+            className="card px-4 py-2.5 text-sm font-medium text-ink/70 hover:text-ink border border-ink/15 hover:border-ink/30 transition"
+          >
+            단원 관리
+          </Link>
+          <Link
+            href="/teacher/test/new"
+            className="card bg-brand px-5 py-3 font-bold text-white transition hover:-translate-y-1"
+          >
+            + AI로 새로 만들기
+          </Link>
+        </div>
       </div>
 
       {/* 통계 카드 — 테스트가 있을 때만 */}

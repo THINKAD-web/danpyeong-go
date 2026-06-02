@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     const units = await prisma.unit.findMany({
       where: {
         subjectId: subject.id,
+        isArchived: false,
         ...(term !== undefined && !isNaN(term) ? { term } : {}),
       },
       orderBy: [{ term: "asc" }, { order: "asc" }],

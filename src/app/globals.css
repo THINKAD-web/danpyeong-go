@@ -31,12 +31,24 @@ body {
   background-image: linear-gradient(transparent 60%, rgba(251, 191, 36, 0.5) 60%);
 }
 
-/* 카드 공통 */
-.card {
-  background: #fff;
-  border: 2px solid #1a1a2e;
-  border-radius: 14px;
-  box-shadow: 4px 4px 0 #1a1a2e;
+/* 카드 공통 — @layer components 로 utilities(bg-*, text-white)가 우선하도록 */
+@layer components {
+  .card {
+    background-color: #fff;
+    border: 2px solid #1a1a2e;
+    border-radius: 14px;
+    box-shadow: 4px 4px 0 #1a1a2e;
+  }
+
+  .select {
+    width: 100%;
+    border: 2px solid #1a1a2e;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    background-color: #fff;
+    color: #1a1a2e;
+    font-weight: 600;
+  }
 }
 
 /* PWA safe-area (노치·홈바 대응) */
