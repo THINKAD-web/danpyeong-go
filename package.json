@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
-    "postinstall": "prisma generate",
+    "build": "npx prisma generate && next build",
+    "postinstall": "npx prisma generate",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
@@ -23,6 +23,7 @@
     "@anthropic-ai/sdk": "^0.100.1",
     "@clerk/nextjs": "^7.4.2",
     "@prisma/client": "^6.2.1",
+    "prisma": "^6.2.1",
     "@react-pdf/renderer": "^4.5.1",
     "next": "^15.5.18",
     "openai": "^6.41.0",
@@ -40,7 +41,6 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "15.5.18",
     "postcss": "^8.5.1",
-    "prisma": "^6.2.1",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
