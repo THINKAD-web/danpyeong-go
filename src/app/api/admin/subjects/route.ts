@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentTeacher } from "@/lib/auth";
+import { currentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 // GET /api/admin/subjects
 export async function GET() {
-  await currentTeacher();
+  await currentAdmin();
   const subjects = await prisma.subject.findMany({
     orderBy: [{ grade: "asc" }, { name: "asc" }],
     include: { _count: { select: { units: true } } },
@@ -20,7 +20,7 @@ const CreateSubjectSchema = z.object({
 
 // POST /api/admin/subjects
 export async function POST(req: NextRequest) {
-  await currentTeacher();
+  await currentAdmin();
   const body = await req.json();
   const parsed = CreateSubjectSchema.safeParse(body);
   if (!parsed.success) {
