@@ -24,6 +24,8 @@ export default function NewTestPage() {
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [errorHint, setErrorHint] = useState<string | null>(null);
+  const [rateLimited, setRateLimited] = useState(false);
 
   // 테스트 저장 상태
   const [saveTitle, setSaveTitle] = useState("");
@@ -54,6 +56,8 @@ export default function NewTestPage() {
     if (!currentUnit) return;
     setLoading(true);
     setError(null);
+    setErrorHint(null);
+    setRateLimited(false);
     setQuestions([]);
     try {
       const res = await fetch("/api/ai/generate", {
@@ -68,10 +72,19 @@ export default function NewTestPage() {
           type,
         }),
       });
-      if (!res.ok) throw new Error("생성 실패");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 429 || res.status === 503) {
+          setRateLimited(true);
+          setError(body.error ?? "AI 생성 한도에 도달했어요.");
+          setErrorHint(body.hint ?? null);
+        } else {
+          setError("문항 생성에 실패했어요. 다시 시도해 주세요.");
+        }
+        return;
+      }
       const data = await res.json();
       setQuestions(data.questions);
-      // 기본 제목 세팅
       setSaveTitle(`${term}학기 ${currentUnit.name} 단원평가`);
     } catch {
       setError("문항 생성에 실패했어요. 다시 시도해 주세요.");
@@ -177,17 +190,24 @@ export default function NewTestPage() {
         {/* AI 생성 로딩 */}
         {loading && <GenerationLoader count={count} />}
 
-        {/* 에러 + 재시도 */}
+        {/* 에러 (rate limit 또는 일반) */}
         {error && !loading && (
-          <div className="flex items-center gap-3 rounded-xl border-2 border-coral/30 bg-coral/5 px-4 py-3">
-            <p className="flex-1 text-sm font-bold text-coral">{error}</p>
-            <button
-              onClick={handleGenerate}
-              disabled={!currentUnit}
-              className="shrink-0 rounded-lg border-2 border-coral px-3 py-1.5 text-xs font-bold text-coral hover:bg-coral hover:text-white transition"
-            >
-              재시도
-            </button>
+          <div className="rounded-xl border-2 border-coral/30 bg-coral/5 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <p className="flex-1 text-sm font-bold text-coral">{error}</p>
+              {!rateLimited && (
+                <button
+                  onClick={handleGenerate}
+                  disabled={!currentUnit}
+                  className="shrink-0 rounded-lg border-2 border-coral px-3 py-1.5 text-xs font-bold text-coral hover:bg-coral hover:text-white transition"
+                >
+                  재시도
+                </button>
+              )}
+            </div>
+            {errorHint && (
+              <p className="mt-1.5 text-xs text-ink/50">{errorHint}</p>
+            )}
           </div>
         )}
       </div>
