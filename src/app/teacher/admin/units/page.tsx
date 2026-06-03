@@ -207,9 +207,9 @@ export default function AdminUnitsPage() {
   return (
     <div className="min-h-screen bg-paper">
       {/* 헤더 */}
-      <header className="bg-white border-b border-ink/10 px-6 py-4 flex items-center gap-4">
-        <Link href="/teacher" className="text-sm text-ink/50 hover:text-ink">← 대시보드</Link>
-        <h1 className="text-lg font-bold text-ink">단원 관리</h1>
+      <header className="safe-top bg-white border-b border-ink/10 px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Link href="/teacher" className="text-sm text-ink/50 hover:text-ink shrink-0">← 대시보드</Link>
+        <h1 className="text-base sm:text-lg font-bold text-ink">단원 관리</h1>
       </header>
 
       {/* 토스트 */}
@@ -223,16 +223,17 @@ export default function AdminUnitsPage() {
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto p-6 flex gap-6">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 flex flex-col lg:flex-row gap-4 lg:gap-6 pb-8 safe-bottom">
 
-        {/* 왼쪽: 과목 목록 */}
-        <aside className="w-56 shrink-0">
+        {/* 과목 선택 (모바일: 가로 스크롤 칩 / 데스크톱: 사이드바) */}
+        <aside className="w-full lg:w-56 lg:shrink-0">
           <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="font-semibold text-ink text-sm">과목</span>
               <button
+                type="button"
                 onClick={() => setShowAddSubject(!showAddSubject)}
-                className="text-xs text-mint hover:underline"
+                className="text-xs text-mint hover:underline min-h-[44px] min-w-[44px] flex items-center justify-end -mr-2"
               >
                 + 추가
               </button>
@@ -274,15 +275,16 @@ export default function AdminUnitsPage() {
             ) : error ? (
               <p className="text-xs text-red-500">{error}</p>
             ) : (
-              <ul className="space-y-1">
+              <ul className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory lg:mx-0 lg:px-0 lg:pb-0 lg:flex-col lg:overflow-visible lg:space-y-1">
                 {subjects.map((s) => (
-                  <li key={s.id}>
+                  <li key={s.id} className="shrink-0 snap-start lg:shrink">
                     <button
+                      type="button"
                       onClick={() => setSelectedSubjectId(s.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                      className={`text-left px-4 py-2.5 rounded-lg text-sm transition-colors min-h-[44px] whitespace-nowrap lg:whitespace-normal lg:w-full ${
                         selectedSubjectId === s.id
                           ? "bg-mint text-white font-medium"
-                          : "hover:bg-ink/5 text-ink"
+                          : "hover:bg-ink/5 text-ink bg-paper lg:bg-transparent"
                       }`}
                     >
                       <span>{s.name}</span>
@@ -299,12 +301,18 @@ export default function AdminUnitsPage() {
         {/* 오른쪽: 단원 목록 */}
         <div className="flex-1 min-w-0">
           {!selectedSubjectId ? (
-            <div className="card p-8 text-center text-ink/50 text-sm">왼쪽에서 과목을 선택하세요.</div>
+            <div className="card p-8 text-center text-ink/50 text-sm">위에서 과목을 선택하세요.</div>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                 <h2 className="font-bold text-ink">단원 목록</h2>
-                <button onClick={openAddUnit} className="btn-primary text-sm">+ 단원 추가</button>
+                <button
+                  type="button"
+                  onClick={openAddUnit}
+                  className="btn-primary text-sm w-full sm:w-auto min-h-[44px]"
+                >
+                  + 단원 추가
+                </button>
               </div>
 
               {/* 단원 추가/수정 폼 */}
@@ -313,7 +321,7 @@ export default function AdminUnitsPage() {
                   <h3 className="font-semibold text-ink mb-4 text-sm">
                     {editingUnit ? `단원 수정: ${editingUnit.name}` : "새 단원 추가"}
                   </h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
                       <label className="block text-ink/60 mb-1">학기</label>
                       <select
@@ -335,7 +343,7 @@ export default function AdminUnitsPage() {
                         onChange={(e) => setUnitForm(f => ({ ...f, order: Number(e.target.value) }))}
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <label className="block text-ink/60 mb-1">단원명 *</label>
                       <input
                         className="w-full border border-ink/20 rounded px-2 py-1.5 text-ink"
@@ -344,7 +352,7 @@ export default function AdminUnitsPage() {
                         onChange={(e) => setUnitForm(f => ({ ...f, name: e.target.value }))}
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <label className="block text-ink/60 mb-1">성취기준 (선택)</label>
                       <input
                         className="w-full border border-ink/20 rounded px-2 py-1.5 text-ink"
@@ -353,7 +361,7 @@ export default function AdminUnitsPage() {
                         onChange={(e) => setUnitForm(f => ({ ...f, achievementStandard: e.target.value }))}
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <label className="block text-ink/60 mb-1">
                         AI 생성 제약 <span className="text-xs text-ink/40">(비워두면 단원명 기반 기본값 적용)</span>
                       </label>
@@ -365,15 +373,22 @@ export default function AdminUnitsPage() {
                       />
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex flex-col-reverse gap-2 mt-4 sm:flex-row">
                     <button
+                      type="button"
+                      onClick={() => setShowUnitForm(false)}
+                      className="btn-secondary text-sm min-h-[44px] w-full sm:w-auto"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleSaveUnit}
                       disabled={unitSaving || !unitForm.name.trim()}
-                      className="btn-primary text-sm"
+                      className="btn-primary text-sm min-h-[44px] w-full sm:w-auto"
                     >
                       {unitSaving ? "저장 중…" : "저장"}
                     </button>
-                    <button onClick={() => setShowUnitForm(false)} className="btn-secondary text-sm">취소</button>
                   </div>
                 </div>
               )}
@@ -389,39 +404,45 @@ export default function AdminUnitsPage() {
                       {termUnits.map((u) => (
                         <div
                           key={u.id}
-                          className={`card p-4 flex items-start gap-3 ${u.isArchived ? "opacity-50" : ""}`}
+                          className={`card p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-3 ${u.isArchived ? "opacity-50" : ""}`}
                         >
-                          <span className="w-6 h-6 rounded-full bg-mint/20 text-mint text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                            {u.order}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-ink text-sm">{u.name}</span>
-                              {u.isArchived && (
-                                <span className="text-xs px-1.5 py-0.5 bg-ink/10 text-ink/50 rounded">보관됨</span>
+                          <div className="flex items-start gap-3 min-w-0 w-full">
+                            <span className="w-8 h-8 rounded-full bg-mint/20 text-mint text-xs font-bold flex items-center justify-center shrink-0">
+                              {u.order}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <span className="font-medium text-ink text-base sm:text-sm leading-snug">{u.name}</span>
+                                {u.isArchived && (
+                                  <span className="text-xs px-1.5 py-0.5 bg-ink/10 text-ink/50 rounded shrink-0">보관됨</span>
+                                )}
+                                <span className="text-xs text-ink/40 shrink-0">문항 {u._count.questions}개</span>
+                              </div>
+                              {u.achievementStandard && (
+                                <p className="text-xs text-ink/50 mt-1.5 leading-relaxed line-clamp-3 sm:line-clamp-2 break-words">
+                                  {u.achievementStandard}
+                                </p>
                               )}
-                              <span className="text-xs text-ink/40">문항 {u._count.questions}개</span>
+                              {u.constraints && (
+                                <p className="text-xs text-blue-600/70 mt-1.5 leading-relaxed line-clamp-3 break-words font-mono">
+                                  제약: {u.constraints}
+                                </p>
+                              )}
                             </div>
-                            {u.achievementStandard && (
-                              <p className="text-xs text-ink/50 mt-0.5 truncate">{u.achievementStandard}</p>
-                            )}
-                            {u.constraints && (
-                              <p className="text-xs text-blue-600/70 mt-0.5 truncate font-mono">
-                                제약: {u.constraints.slice(0, 80)}{u.constraints.length > 80 ? "…" : ""}
-                              </p>
-                            )}
                           </div>
-                          <div className="flex gap-2 shrink-0">
+                          <div className="flex gap-2 w-full border-t border-ink/10 pt-3 sm:w-auto sm:border-0 sm:pt-0 sm:shrink-0">
                             <button
+                              type="button"
                               onClick={() => openEditUnit(u)}
-                              className="text-xs text-ink/50 hover:text-ink px-2 py-1 rounded border border-ink/15 hover:border-ink/30"
+                              className="flex-1 sm:flex-none text-sm text-ink/70 hover:text-ink min-h-[44px] px-3 rounded-lg border-2 border-ink/15 hover:border-ink/30 font-medium"
                             >
                               수정
                             </button>
                             {!u.isArchived && (
                               <button
+                                type="button"
                                 onClick={() => handleDeleteUnit(u)}
-                                className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded border border-red-200 hover:border-red-400"
+                                className="flex-1 sm:flex-none text-sm text-red-500 hover:text-red-600 min-h-[44px] px-3 rounded-lg border-2 border-red-200 hover:border-red-400 font-medium"
                               >
                                 삭제
                               </button>
