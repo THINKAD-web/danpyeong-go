@@ -31,6 +31,7 @@ export type GeneratedQuestion = {
   choices: GeneratedChoice[];
   answerKeywords: string[];
   explanation: string;
+  source?: "AI" | "MANUAL";
 };
 
 export type RawMCQ = {
