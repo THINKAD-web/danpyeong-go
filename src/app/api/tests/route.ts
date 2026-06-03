@@ -14,6 +14,7 @@ const SaveSchema = z.object({
       stem: z.string().min(1),
       explanation: z.string().default(""),
       answerKeywords: z.array(z.string()).default([]),
+      source: z.enum(["AI", "MANUAL"]).default("AI"),
       choices: z.array(
         z.object({ order: z.number(), text: z.string(), isCorrect: z.boolean() })
       ).default([]),
@@ -66,11 +67,11 @@ export async function POST(req: NextRequest) {
             authorId: author.id,
             type: q.type,
             difficulty: q.difficulty,
-            source: "AI",
+            source: q.source ?? "AI",
             stem: q.stem,
             explanation: q.explanation,
             answerKeywords: q.answerKeywords,
-            isReviewed: false,
+            isReviewed: q.source === "MANUAL",
             choices: {
               create: q.choices.map((c) => ({
                 order: c.order,
