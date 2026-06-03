@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentTeacher } from "@/lib/auth";
+import { currentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -15,7 +15,7 @@ const UpdateUnitSchema = z.object({
 
 // PATCH /api/admin/units/[unitId]
 export async function PATCH(req: NextRequest, { params }: Params) {
-  await currentTeacher();
+  await currentAdmin();
   const { unitId } = await params;
   const body = await req.json();
   const parsed = UpdateUnitSchema.safeParse(body);
@@ -36,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 // DELETE /api/admin/units/[unitId]
 // 문항이 있으면 soft-delete(isArchived=true), 없으면 hard-delete
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  await currentTeacher();
+  await currentAdmin();
   const { unitId } = await params;
 
   const questionCount = await prisma.question.count({ where: { unitId } });

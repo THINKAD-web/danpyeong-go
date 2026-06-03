@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentTeacher } from "@/lib/auth";
+import { currentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -7,7 +7,7 @@ type Params = { params: Promise<{ subjectId: string }> };
 
 // GET /api/admin/subjects/[subjectId]/units
 export async function GET(_req: NextRequest, { params }: Params) {
-  await currentTeacher();
+  await currentAdmin();
   const { subjectId } = await params;
 
   const units = await prisma.unit.findMany({
@@ -28,7 +28,7 @@ const CreateUnitSchema = z.object({
 
 // POST /api/admin/subjects/[subjectId]/units
 export async function POST(req: NextRequest, { params }: Params) {
-  await currentTeacher();
+  await currentAdmin();
   const { subjectId } = await params;
   const body = await req.json();
   const parsed = CreateUnitSchema.safeParse(body);
