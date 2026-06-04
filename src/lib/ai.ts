@@ -11,6 +11,8 @@
 //   조립:   코드가 correctValue 기준으로 isCorrect를 기계적으로 부여.
 // ============================================================
 
+import { existsSync, readFileSync } from "fs";
+import { resolve } from "path";
 import Anthropic from "@anthropic-ai/sdk";
 import {
   GenerateInputSchema,
@@ -29,6 +31,29 @@ import {
 
 export { GenerateInputSchema, validateQuestion } from "./ai-shared";
 export type { GenerateInput, GeneratedChoice, GeneratedQuestion } from "./ai-shared";
+
+/** 로컬: .env.local 직접 읽기 (셸 export·Next 캐시에 남은 예전 키 회피) */
+function readAnthropicKeyFromEnvLocal(): string | undefined {
+  const envPath = resolve(process.cwd(), ".env.local");
+  if (!existsSync(envPath)) return undefined;
+  const line = readFileSync(envPath, "utf8")
+    .split(/\r?\n/)
+    .find((l) => l.startsWith("ANTHROPIC_API_KEY="));
+  if (!line) return undefined;
+  const raw = line.slice("ANTHROPIC_API_KEY=".length).trim();
+  const key = raw.replace(/^["']+|["']+$/g, "");
+  return key || undefined;
+}
+
+function anthropicApiKey(): string {
+  const fromFile =
+    process.env.NODE_ENV !== "production" ? readAnthropicKeyFromEnvLocal() : undefined;
+  const apiKey =
+    fromFile ??
+    process.env.ANTHROPIC_API_KEY?.trim().replace(/^["']+|["']+$/g, "");
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.");
+  return apiKey;
+}
 
 // ── API 호출 ───────────────────────────────────────────────
 
@@ -96,9 +121,7 @@ export async function generateQuestions(
 ): Promise<GeneratedQuestion[]> {
   GenerateInputSchema.parse(input);
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.");
-  const client = new Anthropic({ apiKey });
+  const client = new Anthropic({ apiKey: anthropicApiKey() });
 
   let accepted: RawQuestion[] = await generateAndVerify(client, input, input.count);
 
