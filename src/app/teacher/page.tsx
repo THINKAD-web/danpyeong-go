@@ -83,7 +83,7 @@ export default async function TeacherDashboard() {
   const firstPublished = tests.find((t) => t.status === "PUBLISHED");
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
+    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
       <nav className="mb-10 flex items-center justify-between">
         <Link href="/" className="font-display text-2xl font-bold text-brandink">
           단평<span className="text-coral">GO</span>
@@ -97,20 +97,20 @@ export default async function TeacherDashboard() {
         </div>
       </nav>
 
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-4xl font-bold">내 단원평가</h1>
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">내 단원평가</h1>
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/teacher/admin/units"
-            className="card px-4 py-2.5 text-sm font-medium text-ink/70 hover:text-ink border border-ink/15 hover:border-ink/30 transition"
+            className="card px-3 py-2 text-sm font-medium text-ink/70 hover:text-ink border border-ink/15 hover:border-ink/30 transition sm:px-4 sm:py-2.5"
           >
             단원 관리
           </Link>
           <Link
             href="/teacher/test/new"
-            className="card bg-brand px-5 py-3 font-bold text-white transition hover:-translate-y-1"
+            className="card bg-brand px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-1 sm:px-5 sm:py-3"
           >
-            + AI로 새로 만들기
+            + 새로 만들기
           </Link>
         </div>
       </div>

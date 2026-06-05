@@ -14,8 +14,8 @@ import {
   RawMCQ,
   RawSA,
   RawQuestion,
-  SYSTEM_PROMPT,
-  VERIFY_SYSTEM_PROMPT,
+  buildSystemPrompt,
+  buildVerifySystemPrompt,
   stripFences,
   assembleMCQ,
   buildUserPrompt,
@@ -52,12 +52,15 @@ async function generateAndVerify(
   input: GenerateInput,
   count: number
 ): Promise<RawQuestion[]> {
+  const grade = input.grade ?? 3;
+  const systemPrompt = buildSystemPrompt(grade);
+
   // Pass 1: 생성 (JSON 파싱 실패 시 1회 재시도)
   let raw: RawQuestion[] | undefined;
   let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      raw = await callGrok(client, SYSTEM_PROMPT, buildUserPrompt(input, count));
+      raw = await callGrok(client, systemPrompt, buildUserPrompt(input, count));
       break;
     } catch (e) {
       lastErr = e;
@@ -69,11 +72,12 @@ async function generateAndVerify(
     throw new Error(`Pass 1 실패: ${msg}`);
   }
 
-  // Pass 2: correctValue 검증·교정·결함 문항 제거 (객관식만)
+  // Pass 2: correctValue 검증·교정·결함 문항 제거 + 범위 이탈 문항 제거 (객관식만)
   if (input.type === "MULTIPLE_CHOICE") {
+    const verifySystemPrompt = buildVerifySystemPrompt(grade, input.unitName);
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        raw = await callGrok(client, VERIFY_SYSTEM_PROMPT, buildVerifyPrompt(raw));
+        raw = await callGrok(client, verifySystemPrompt, buildVerifyPrompt(raw, grade, input.unitName));
         break;
       } catch {
         if (attempt === 0) await new Promise((r) => setTimeout(r, 1000));
