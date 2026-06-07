@@ -41,6 +41,7 @@ export default function NewTestPage() {
 
   // ── 생성 옵션 ───────────────────────────────────────────
   const [count, setCount] = useState(5);
+  const [countStr, setCountStr] = useState("5");
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [type, setType] = useState<"MULTIPLE_CHOICE" | "SHORT_ANSWER">("MULTIPLE_CHOICE");
 
@@ -105,7 +106,7 @@ export default function NewTestPage() {
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ unitId, unitName: currentUnit.name, term, count, difficulty, type }),
+        body: JSON.stringify({ unitId, unitName: currentUnit.name, grade, term, count, difficulty, type }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -216,8 +217,22 @@ export default function NewTestPage() {
         <div className="flex flex-wrap gap-3">
           <Field label="문항 수">
             <input
-              type="number" min={1} max={20} value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={countStr}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, "");
+                const stripped = raw.replace(/^0+/, "") || "";
+                setCountStr(stripped);
+                const n = parseInt(stripped);
+                if (!isNaN(n) && n >= 1 && n <= 20) setCount(n);
+              }}
+              onBlur={() => {
+                const n = Math.min(20, Math.max(1, parseInt(countStr) || 1));
+                setCount(n);
+                setCountStr(String(n));
+              }}
               className="select"
             />
           </Field>

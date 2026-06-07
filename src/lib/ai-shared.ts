@@ -8,6 +8,7 @@ import { z } from "zod";
 export const GenerateInputSchema = z.object({
   unitId: z.string().min(1),
   unitName: z.string().min(1),
+  grade: z.number().int().min(1).max(6).default(3),
   term: z.number().int().min(1).max(2),
   count: z.number().int().min(1).max(20),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
@@ -55,19 +56,20 @@ export type RawQuestion = RawMCQ | RawSA;
 
 // ── 프롬프트 ──────────────────────────────────────────────
 
-export const SYSTEM_PROMPT = `당신은 대한민국 초등학교 수학 평가 문항 출제 전문가입니다.
-2022 개정 교육과정을 따르며, 초등학교 3학년 학생의 인지 수준에 맞는
+export function buildSystemPrompt(grade: number): string {
+  return `당신은 대한민국 초등학교 수학 평가 문항 출제 전문가입니다.
+2022 개정 교육과정을 따르며, 초등학교 ${grade}학년 학생의 인지 수준에 맞는
 단원평가 문항을 출제합니다.
 
 [출제 원칙]
-- 3학년 학생이 이해할 수 있는 쉽고 명확한 한국어를 사용한다.
+- ${grade}학년 학생이 이해할 수 있는 쉽고 명확한 한국어를 사용한다.
 - 한 문항은 하나의 개념만 평가한다.
 - 객관식은 4지선다이며, 정답은 정확히 1개다.
 - 오답(매력적 오답)은 학생이 흔히 하는 실수를 반영하되, 명백히 틀린 것이어야 한다.
 - 보기 간 길이·형식을 비슷하게 맞춰 정답이 티 나지 않게 한다.
 - 숫자 계산은 반드시 검산하여 correctValue와 해설이 일치하도록 한다.
 - 문화적으로 한국 초등학생에게 자연스러운 소재(이름, 상황)를 쓴다.
-- 해설은 풀이 과정을 단계적으로, 3학년이 읽을 수 있게 쓴다.
+- 해설은 풀이 과정을 단계적으로, ${grade}학년이 읽을 수 있게 쓴다.
 
 [계산 정확성 — 필수]
 - stem에 포함된 모든 숫자 연산을 직접 계산한 뒤 correctValue를 확정한다.
@@ -75,10 +77,15 @@ export const SYSTEM_PROMPT = `당신은 대한민국 초등학교 수학 평가 
   예) "28 ÷ 5의 몫을 구하시오" 는 나머지가 3이므로 금지. → "28 ÷ 4 = □" 처럼 나누어 떨어지는 수 사용.
   예) 나머지를 묻고 싶다면 "28 ÷ 5의 나머지는 얼마입니까?" 형태로 명시.
 - 단위 변환: 1L=1000mL, 1kg=1000g, 1m=100cm, 1km=1000m 기준 엄수.
-- 결과값이 음수·소수가 되는 연산 금지 (3학년 범위 초과).
+- 결과값이 음수·소수가 되는 연산 금지.
+
+[교육과정 범위 — 절대 준수]
+- 반드시 ${grade}학년 교육과정 범위 안의 개념만 사용한다.
+- ${grade + 1}학년 이상에서 처음 등장하는 개념(예: 넓이=가로×세로, 비례식, 분수의 나눗셈 등)은 절대 사용하지 않는다.
+- 지정된 단원 이외의 개념을 문항에 혼용하지 않는다.
 
 [금지]
-- 교육과정 범위를 벗어나는 개념(예: 3학년에 미등장 연산) 사용 금지.
+- 교육과정 범위를 벗어나는 개념 사용 금지.
 - 함정성 표현, 이중 부정, 모호한 문장 금지.
 - 특정 교과서·기출문제의 문구를 그대로 베끼지 않는다(자체 창작).
 - distractors 에 correctValue 와 동일한 값을 포함하지 않는다.
@@ -86,9 +93,11 @@ export const SYSTEM_PROMPT = `당신은 대한민국 초등학교 수학 평가 
 
 [출력 형식]
 - 반드시 유효한 JSON만 출력한다. 코드펜스(\`\`\`)나 설명 문장을 절대 덧붙이지 않는다.`;
+}
 
-export const VERIFY_SYSTEM_PROMPT = `당신은 초등학교 수학 문항 검수 전문가입니다.
-주어진 JSON 문항 배열을 검토하여 correctValue 오류를 교정하고 동일 스키마로 반환합니다.
+export function buildVerifySystemPrompt(grade: number, unitName: string): string {
+  return `당신은 초등학교 수학 문항 검수 전문가입니다.
+주어진 JSON 문항 배열을 검토하여 오류를 교정하고 동일 스키마로 반환합니다.
 
 [검수 절차 — 각 문항마다 반드시 수행]
 1. stem을 처음부터 직접 계산한다. 외부 정보나 기존 correctValue는 참고하지 않는다.
@@ -96,8 +105,9 @@ export const VERIFY_SYSTEM_PROMPT = `당신은 초등학교 수학 문항 검수
 3. 다르면 correctValue와 explanation을 올바른 값으로 교정한다.
 4. 다음 중 하나라도 해당하면 해당 문항을 배열에서 제거한다:
    - 나눗셈 연산이 포함된 stem에서 나누어 떨어지지 않는데 몫만 묻는 경우
-   - 결과가 음수·소수가 되어 3학년 범위를 벗어나는 경우
+   - 결과가 음수·소수가 되는 경우
    - 어떻게 계산해도 명확한 정답을 구할 수 없는 경우
+   - ${grade}학년 ${unitName} 단원 범위를 벗어나는 개념이 사용된 경우 (예: ${grade + 1}학년 이상 개념)
 5. distractors에 correctValue와 동일한 값이 있으면 다른 오답으로 교체한다.
 6. distractors 3개 중 중복이 있으면 중복 오답을 다른 값으로 교체한다.
 7. distractors는 정확히 3개여야 한다.
@@ -105,6 +115,7 @@ export const VERIFY_SYSTEM_PROMPT = `당신은 초등학교 수학 문항 검수
 [출력 형식]
 - 반드시 유효한 JSON만 출력한다. 코드펜스나 설명 문장을 절대 덧붙이지 않는다.
 - 스키마: { "questions": [ ...교정된 문항 배열... ] }`;
+}
 
 // ── 단원별 제약 힌트 ───────────────────────────────────────
 
@@ -198,14 +209,16 @@ export function buildUserPrompt(input: GenerateInput, count = input.count): stri
     ? `\n[단원별 주의사항 — 반드시 준수]\n- ${input.unitConstraints}`
     : getUnitConstraints(input.unitName);
 
-  return `다음 조건으로 초등학교 3학년 수학 단원평가 문항을 만들어 주세요.
+  const grade = input.grade ?? 3;
+  return `다음 조건으로 초등학교 ${grade}학년 수학 단원평가 문항을 만들어 주세요.
 
-- 학년/학기: 3학년 ${input.term}학기
+- 학년/학기: ${grade}학년 ${input.term}학기
 - 단원: ${input.unitName}
 - 성취기준(참고): 해당 단원의 핵심 계산 및 개념 이해
 - 문항 수: ${count}개
 - 난이도: ${diffLabel}  (하=기초 계산/개념 확인, 중=개념 적용, 상=문장제·복합 사고)
 - 유형: ${input.type}
+- 절대 준수: ${grade}학년 ${input.unitName} 단원 범위를 벗어나는 개념 사용 금지. ${grade + 1}학년 이상에서 배우는 내용(예: 넓이 공식, 비례식, 분수의 나눗셈 등)은 절대 포함하지 말 것.
 ${unitConstraints}
 
 ${isMCQ ? `아래 JSON 스키마로만 응답하세요 (객관식):
@@ -243,10 +256,13 @@ ${isMCQ ? `아래 JSON 스키마로만 응답하세요 (객관식):
 }`}`;
 }
 
-export function buildVerifyPrompt(questions: RawQuestion[]): string {
-  return `아래 문항들의 correctValue가 stem을 실제로 풀었을 때 나오는 값과 일치하는지 검수하세요.
+export function buildVerifyPrompt(questions: RawQuestion[], grade: number, unitName: string): string {
+  return `대상: ${grade}학년 ${unitName} 단원 문항
+
+아래 문항들의 correctValue가 stem을 실제로 풀었을 때 나오는 값과 일치하는지 검수하세요.
 각 문항을 처음부터 직접 계산하여 틀린 경우 correctValue와 explanation을 교정해 반환하세요.
 나눗셈이 나누어 떨어지지 않는데 몫만 묻는 문항은 배열에서 제거하세요.
+${grade}학년 ${unitName} 단원 범위를 벗어나는 개념(${grade + 1}학년 이상 내용 포함)이 사용된 문항은 배열에서 제거하세요.
 distractors에 correctValue와 같은 값이 있거나 distractors 간 중복이 있으면 다른 값으로 교체하세요.
 
 ${JSON.stringify({ questions }, null, 2)}`;
