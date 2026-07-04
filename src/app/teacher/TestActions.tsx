@@ -10,14 +10,19 @@ export function TestActions({
   testId,
   status,
   shareToken,
+  title,
+  attemptCount,
 }: {
   testId: string;
   status: Status;
   shareToken: string;
+  title: string;
+  attemptCount: number;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function changeStatus(next: Status) {
     setLoading(true);
@@ -39,6 +44,31 @@ export function TestActions({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  async function handleDelete() {
+    const attemptNotice =
+      attemptCount > 0
+        ? `\n\n응시 기록 ${attemptCount}건이 함께 삭제되며 복구할 수 없습니다.`
+        : "\n\n이 작업은 복구할 수 없습니다.";
+    const confirmed = confirm(`"${title}" 평가를 삭제할까요?${attemptNotice}`);
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/teacher/tests/${testId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error ?? "삭제 중 오류가 발생했어요.");
+        return;
+      }
+      alert(`"${title}" 평가가 삭제됐어요. (응시 기록 ${data.deletedAttemptCount ?? 0}건 포함)`);
+      router.refresh();
+    } catch {
+      alert("삭제 중 오류가 발생했어요.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -79,6 +109,13 @@ export function TestActions({
         {status === "CLOSED" && (
           <span className="px-4 py-2 text-sm text-ink/40">마감됨</span>
         )}
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="card bg-white px-4 py-2 text-sm font-bold text-coral transition hover:-translate-y-0.5 disabled:opacity-50"
+        >
+          {deleting ? "삭제 중…" : "삭제"}
+        </button>
       </div>
       {/* 배포 중인 테스트에 코드를 항상 노출 — 카톡/알림장 공유 시 참고 */}
       {status === "PUBLISHED" && (

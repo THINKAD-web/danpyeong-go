@@ -215,7 +215,8 @@ enum AttemptStatus {
 model Attempt {
   id          String     @id @default(cuid())
   testId      String
-  test        Test       @relation(fields: [testId], references: [id])
+  // 교사가 Test를 삭제하면 응시 기록도 함께 삭제된다 (교사용 삭제 기능의 전제조건)
+  test        Test       @relation(fields: [testId], references: [id], onDelete: Cascade)
   classroomId String?
   classroom   Classroom? @relation(fields: [classroomId], references: [id])
 
@@ -237,7 +238,9 @@ model Answer {
   attemptId      String
   attempt        Attempt      @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   testQuestionId String
-  testQuestion   TestQuestion @relation(fields: [testQuestionId], references: [id])
+  // ON DELETE RESTRICT였다면 Test 삭제 시 TestQuestion 캐스케이드 삭제가
+  // (Answer가 아직 남아있다는 이유로) 즉시 실패할 수 있어 Cascade로 변경
+  testQuestion   TestQuestion @relation(fields: [testQuestionId], references: [id], onDelete: Cascade)
 
   // 객관식: 선택한 Choice id / 단답형: 입력 텍스트
   selectedChoiceId String?
