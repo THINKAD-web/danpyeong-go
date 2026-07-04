@@ -23,7 +23,7 @@ const CreateUnitSchema = z.object({
   order: z.number().int().min(1),
   name: z.string().min(1),
   achievementStandard: z.string().optional(),
-  constraints: z.string().optional(),
+  constraints: z.string().max(2000).optional(),
 });
 
 // POST /api/admin/subjects/[subjectId]/units
