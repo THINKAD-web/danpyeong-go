@@ -7,7 +7,6 @@ import { z } from "zod";
 
 export const GenerateInputSchema = z.object({
   unitId: z.string().min(1),
-  unitName: z.string().min(1),
   grade: z.number().int().min(1).max(6).default(3),
   term: z.number().int().min(1).max(2),
   count: z.number().int().min(1).max(20),
@@ -17,7 +16,12 @@ export const GenerateInputSchema = z.object({
   unitConstraints: z.string().optional(),
 });
 
-export type GenerateInput = z.infer<typeof GenerateInputSchema>;
+// unitName은 요청 스키마에 포함하지 않는다 — 호출부(route.ts)가 unitId로
+// DB에서 조회한 값을 채워 넣는다. 클라이언트가 임의 문자열을 프롬프트에
+// 주입(토큰 폭주·인젝션)하지 못하게 하기 위함.
+export type GenerateInput = z.infer<typeof GenerateInputSchema> & {
+  unitName: string;
+};
 
 export type GeneratedChoice = {
   order: number;
