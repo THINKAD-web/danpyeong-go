@@ -30,7 +30,7 @@ async function getTeacherData() {
       title: true,
       status: true,
       shareToken: true,
-      _count: { select: { questions: true } },
+      _count: { select: { questions: true, attempts: true } },
       attempts: {
         where: { status: "SUBMITTED" },
         select: { score: true, maxScore: true },
@@ -59,6 +59,7 @@ async function getTeacherData() {
         shareToken: t.shareToken,
         questionCount: t._count.questions,
         attemptCount,
+        totalAttemptCount: t._count.attempts,
         avgScore,
       };
     }),
@@ -161,7 +162,13 @@ export default async function TeacherDashboard() {
                       {t.avgScore !== null && ` · 평균 ${t.avgScore}점`}
                     </p>
                   </div>
-                  <TestActions testId={t.id} status={t.status} shareToken={t.shareToken} />
+                  <TestActions
+                    testId={t.id}
+                    status={t.status}
+                    shareToken={t.shareToken}
+                    title={t.title}
+                    attemptCount={t.totalAttemptCount}
+                  />
                 </div>
               );
             })}
