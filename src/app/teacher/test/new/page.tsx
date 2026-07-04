@@ -106,7 +106,7 @@ export default function NewTestPage() {
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ unitId, unitName: currentUnit.name, grade, term, count, difficulty, type }),
+        body: JSON.stringify({ unitId, grade, term, count, difficulty, type }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

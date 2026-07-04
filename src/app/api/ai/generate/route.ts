@@ -50,24 +50,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // DB에서 단원 제약 조회 — 편집된 값이 있으면 hardcode 대신 사용
-    let unitConstraints: string | undefined;
-    try {
-      const unit = await prisma.unit.findUnique({
-        where: { id: parsed.data.unitId },
-        select: { constraints: true },
-      });
-      unitConstraints = unit?.constraints ?? undefined;
-    } catch {
-      // 조회 실패 시 기본값(unitName 기반) 사용
+    // DB에서 단원 이름·제약 조회 — 프롬프트에는 클라이언트가 보낸 값이 아닌
+    // 이 값만 사용한다 (클라이언트발 unitName을 신뢰하지 않기 위함)
+    const unit = await prisma.unit.findUnique({
+      where: { id: parsed.data.unitId },
+      select: { name: true, constraints: true },
+    });
+    if (!unit) {
+      return NextResponse.json({ error: "단원을 찾을 수 없습니다." }, { status: 404 });
     }
+    const unitConstraints = unit.constraints ?? undefined;
 
     // ── 동시 요청 잠금 ────────────────────────────────────────
     markInProgress(authorId);
 
     let questions;
     try {
-      questions = await generateQuestions({ ...parsed.data, unitConstraints });
+      questions = await generateQuestions({ ...parsed.data, unitName: unit.name, unitConstraints });
     } finally {
       // 성공·실패 모두 잠금 해제
       clearInProgress(authorId);

@@ -10,7 +10,7 @@ const UpdateUnitSchema = z.object({
   order: z.number().int().min(1).optional(),
   name: z.string().min(1).optional(),
   achievementStandard: z.string().nullable().optional(),
-  constraints: z.string().nullable().optional(),
+  constraints: z.string().max(2000).nullable().optional(),
 });
 
 // PATCH /api/admin/units/[unitId]
