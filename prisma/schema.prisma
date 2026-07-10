@@ -103,7 +103,7 @@ model Question {
   unitId      String
   unit        Unit           @relation(fields: [unitId], references: [id])
   authorId    String // 생성/소유 교사
-  author      User           @relation(fields: [authorId], references: [id])
+  author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   type        QuestionType
   difficulty  Difficulty     @default(MEDIUM)
   source      QuestionSource @default(AI)
@@ -148,7 +148,7 @@ enum TestStatus {
 model Test {
   id          String     @id @default(cuid())
   ownerId     String
-  owner       User       @relation(fields: [ownerId], references: [id])
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   classroomId String?
   classroom   Classroom? @relation(fields: [classroomId], references: [id])
 
@@ -176,7 +176,7 @@ model TestQuestion {
   testId     String
   test       Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
   questionId String
-  question   Question @relation(fields: [questionId], references: [id])
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   order      Int
   points     Int      @default(1)
 
@@ -192,7 +192,7 @@ model TestQuestion {
 model Classroom {
   id        String   @id @default(cuid())
   teacherId String
-  teacher   User     @relation(fields: [teacherId], references: [id])
+  teacher   User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   name      String // 예: "3학년 2반"
   code      String   @unique // 학생 입장용 코드 (예: "X7K2")
   createdAt DateTime @default(now())
@@ -258,7 +258,7 @@ model Answer {
 model AiUsageLog {
   id            String   @id @default(cuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   unitId        String?
   model         String   @default("claude-sonnet-4-6")
   questionCount Int
