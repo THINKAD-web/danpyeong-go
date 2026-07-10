@@ -9,6 +9,8 @@ const isPublic = createRouteMatcher([
   "/api/webhooks/clerk",
   // Vercel Cron → Authorization: Bearer CRON_SECRET 이 인증을 대체한다 (route.ts 참고)
   "/api/cron/anonymize-attempts",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
