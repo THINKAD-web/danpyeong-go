@@ -280,3 +280,17 @@ model OpsAlertDay {
   @@unique([key, day])
   @@index([key])
 }
+
+// 공개 데모 AI 사용량 — 계정 없이 호출되므로 IP 해시로 추적 (AiUsageLog와 분리)
+model DemoAiUsageLog {
+  id            String   @id @default(cuid())
+  ipHash        String
+  unitId        String?
+  model         String   @default("claude-sonnet-4-6")
+  questionCount Int
+  questionType  String
+  createdAt     DateTime @default(now())
+
+  @@index([ipHash, createdAt])
+  @@index([createdAt])
+}

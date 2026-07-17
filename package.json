@@ -14,7 +14,8 @@
     "db:studio": "prisma studio",
     "verify:clerk-webhook": "tsx scripts/verify-clerk-webhook.ts",
     "verify:anonymize-cron": "tsx scripts/verify-anonymize-cron.ts",
-    "verify:ai-usage-alert": "tsx scripts/verify-ai-usage-alert.ts"
+    "verify:ai-usage-alert": "tsx scripts/verify-ai-usage-alert.ts",
+    "verify:demo-rate-limit": "tsx scripts/verify-demo-rate-limit.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

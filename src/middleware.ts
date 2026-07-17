@@ -4,6 +4,8 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 const isPublic = createRouteMatcher([
   "/",
   "/privacy",
+  "/demo(.*)",
+  "/api/demo(.*)",
   "/play(.*)",
   "/api/play(.*)",
   // Clerk 서버 → svix 서명 검증이 인증을 대체한다 (route.ts 참고)
