@@ -6,6 +6,18 @@
  * 전수 검산하여 결함 여부를 표로 출력.
  */
 
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
+// 키 존재 여부 조기 확인 (값 출력 금지)
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+if (!ANTHROPIC_KEY) {
+  console.error("❌ ANTHROPIC_API_KEY가 설정되지 않았습니다.");
+  console.error("   ~/danpyeong-go/.env.local 파일에 ANTHROPIC_API_KEY=실제키값 을 추가하세요.");
+  process.exit(1);
+}
+console.log(`✅ ANTHROPIC_API_KEY 확인 (len=${ANTHROPIC_KEY.length})`);
+
 import { generateQuestions, validateQuestion } from "../src/lib/ai";
 import type { GenerateInput, GeneratedQuestion } from "../src/lib/ai";
 
@@ -83,19 +95,19 @@ const FAKE_UNIT_ID = "verify-script";
 const cases: TestCase[] = [
   {
     label: "곱셈/중",
-    input: { unitId: FAKE_UNIT_ID, unitName: "곱셈 (두 자리 수 × 한 자리 수)", term: 1, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
+    input: { unitId: FAKE_UNIT_ID, unitName: "곱셈 (두 자리 수 × 한 자리 수)", grade: 3, term: 1, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
   },
   {
     label: "나눗셈/상",
-    input: { unitId: FAKE_UNIT_ID, unitName: "나눗셈", term: 1, count: 5, difficulty: "HARD", type: "MULTIPLE_CHOICE" },
+    input: { unitId: FAKE_UNIT_ID, unitName: "나눗셈", grade: 3, term: 1, count: 5, difficulty: "HARD", type: "MULTIPLE_CHOICE" },
   },
   {
     label: "분수/중",
-    input: { unitId: FAKE_UNIT_ID, unitName: "분수", term: 2, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
+    input: { unitId: FAKE_UNIT_ID, unitName: "분수", grade: 3, term: 2, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
   },
   {
     label: "들이무게/중",
-    input: { unitId: FAKE_UNIT_ID, unitName: "들이와 무게", term: 2, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
+    input: { unitId: FAKE_UNIT_ID, unitName: "들이와 무게", grade: 3, term: 2, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
   },
 ];
 

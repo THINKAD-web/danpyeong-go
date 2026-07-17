@@ -31,14 +31,28 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // 코드 존재 여부/상태를 응답으로 구분하면 브루트포스 시 정보 누출이 되므로
+    // 클라이언트에는 항상 동일한 404 응답을 반환한다. 실패 사유는 서버 로그에만 남긴다.
     if (!test) {
-      return NextResponse.json({ error: "존재하지 않는 평가 코드입니다." }, { status: 404 });
+      console.warn("[POST /api/play/start] 코드 없음:", shareToken);
+      return NextResponse.json(
+        { error: "유효하지 않은 평가 코드입니다. 코드를 다시 확인하거나 선생님께 문의해 주세요." },
+        { status: 404 }
+      );
     }
     if (test.status === "CLOSED") {
-      return NextResponse.json({ error: "이미 마감된 평가입니다." }, { status: 403 });
+      console.warn("[POST /api/play/start] 마감된 평가:", test.id);
+      return NextResponse.json(
+        { error: "유효하지 않은 평가 코드입니다. 코드를 다시 확인하거나 선생님께 문의해 주세요." },
+        { status: 404 }
+      );
     }
     if (test.status === "DRAFT") {
-      return NextResponse.json({ error: "아직 배포되지 않은 평가입니다." }, { status: 403 });
+      console.warn("[POST /api/play/start] 미배포 평가:", test.id);
+      return NextResponse.json(
+        { error: "유효하지 않은 평가 코드입니다. 코드를 다시 확인하거나 선생님께 문의해 주세요." },
+        { status: 404 }
+      );
     }
 
     const attempt = await prisma.attempt.create({

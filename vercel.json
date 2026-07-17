@@ -1,0 +1,13 @@
+{
+  "buildCommand": "npx prisma migrate deploy && npx prisma generate && next build",
+  "crons": [
+    {
+      "path": "/api/cron/anonymize-attempts",
+      "schedule": "0 0 28 2 *"
+    },
+    {
+      "path": "/api/cron/anonymize-attempts",
+      "schedule": "0 0 31 8 *"
+    }
+  ]
+}

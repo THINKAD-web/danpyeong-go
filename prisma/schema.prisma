@@ -35,9 +35,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  classrooms Classroom[]
-  questions  Question[] // 이 교사가 생성/저장한 문항
-  tests      Test[]
+  classrooms  Classroom[]
+  questions   Question[]
+  tests       Test[]
+  aiUsageLogs AiUsageLog[]
 
   @@index([clerkId])
 }
@@ -66,6 +67,10 @@ model Unit {
   name         String // 예: "곱셈"
   // 2022 개정 교육과정 성취기준 코드/설명 → AI 프롬프트 컨텍스트로 사용
   achievementStandard String? @db.Text
+  // AI 문항 생성 제약 — 화면에서 편집 가능. null 이면 ai-shared.ts 기본값 사용.
+  constraints  String?  @db.Text
+  // soft-delete: 기존 문항이 있는 단원을 실수로 삭제하는 것 방지
+  isArchived   Boolean  @default(false)
 
   questions Question[]
 
@@ -98,7 +103,7 @@ model Question {
   unitId      String
   unit        Unit           @relation(fields: [unitId], references: [id])
   authorId    String // 생성/소유 교사
-  author      User           @relation(fields: [authorId], references: [id])
+  author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   type        QuestionType
   difficulty  Difficulty     @default(MEDIUM)
   source      QuestionSource @default(AI)
@@ -143,7 +148,7 @@ enum TestStatus {
 model Test {
   id          String     @id @default(cuid())
   ownerId     String
-  owner       User       @relation(fields: [ownerId], references: [id])
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   classroomId String?
   classroom   Classroom? @relation(fields: [classroomId], references: [id])
 
@@ -171,7 +176,7 @@ model TestQuestion {
   testId     String
   test       Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
   questionId String
-  question   Question @relation(fields: [questionId], references: [id])
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   order      Int
   points     Int      @default(1)
 
@@ -187,7 +192,7 @@ model TestQuestion {
 model Classroom {
   id        String   @id @default(cuid())
   teacherId String
-  teacher   User     @relation(fields: [teacherId], references: [id])
+  teacher   User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   name      String // 예: "3학년 2반"
   code      String   @unique // 학생 입장용 코드 (예: "X7K2")
   createdAt DateTime @default(now())
@@ -210,7 +215,8 @@ enum AttemptStatus {
 model Attempt {
   id          String     @id @default(cuid())
   testId      String
-  test        Test       @relation(fields: [testId], references: [id])
+  // 교사가 Test를 삭제하면 응시 기록도 함께 삭제된다 (교사용 삭제 기능의 전제조건)
+  test        Test       @relation(fields: [testId], references: [id], onDelete: Cascade)
   classroomId String?
   classroom   Classroom? @relation(fields: [classroomId], references: [id])
 
@@ -232,7 +238,9 @@ model Answer {
   attemptId      String
   attempt        Attempt      @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   testQuestionId String
-  testQuestion   TestQuestion @relation(fields: [testQuestionId], references: [id])
+  // ON DELETE RESTRICT였다면 Test 삭제 시 TestQuestion 캐스케이드 삭제가
+  // (Answer가 아직 남아있다는 이유로) 즉시 실패할 수 있어 Cascade로 변경
+  testQuestion   TestQuestion @relation(fields: [testQuestionId], references: [id], onDelete: Cascade)
 
   // 객관식: 선택한 Choice id / 단답형: 입력 텍스트
   selectedChoiceId String?
@@ -242,4 +250,22 @@ model Answer {
 
   @@unique([attemptId, testQuestionId])
   @@index([attemptId])
+}
+
+// ----------------------------------------------------------
+// AI 사용량 로그 — 비용 방어·관리자 모니터링용 (작업 A)
+// ----------------------------------------------------------
+model AiUsageLog {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitId        String?
+  model         String   @default("claude-sonnet-4-6")
+  questionCount Int
+  questionType  String
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }

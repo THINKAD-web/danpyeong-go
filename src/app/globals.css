@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
   --font-display: "Gaegu", "Pretendard", system-ui, sans-serif;
   --font-sans: "Pretendard", system-ui, sans-serif;
+}
+
+html {
+  color: #1a1a2e;
 }
 
 body {
@@ -26,10 +31,32 @@ body {
   background-image: linear-gradient(transparent 60%, rgba(251, 191, 36, 0.5) 60%);
 }
 
-/* 카드 공통 */
-.card {
-  background: #fff;
-  border: 2px solid #1a1a2e;
-  border-radius: 14px;
-  box-shadow: 4px 4px 0 #1a1a2e;
+/* 카드 공통 — @layer components 로 utilities(bg-*, text-white)가 우선하도록 */
+@layer components {
+  .card {
+    background-color: #fff;
+    border: 2px solid #1a1a2e;
+    border-radius: 14px;
+    box-shadow: 4px 4px 0 #1a1a2e;
+  }
+
+  .select {
+    width: 100%;
+    border: 2px solid #1a1a2e;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    background-color: #fff;
+    color: #1a1a2e;
+    font-weight: 600;
+  }
+}
+
+/* PWA safe-area (노치·홈바 대응) */
+.safe-top    { padding-top:    env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* 응시 화면 전용: 모바일 키보드가 올라와도 스크롤 가능하도록 */
+.play-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
