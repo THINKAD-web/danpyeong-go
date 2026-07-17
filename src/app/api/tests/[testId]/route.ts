@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { currentTeacher } from "@/lib/auth";
+import { allocateUniqueShortCode } from "@/lib/short-code";
 
 const PatchSchema = z.object({
   status: z.enum(["DRAFT", "PUBLISHED", "CLOSED"]),
@@ -29,14 +30,23 @@ export async function PATCH(
     });
     if (!test) return NextResponse.json({ error: "테스트를 찾을 수 없습니다." }, { status: 404 });
 
+    const nextStatus = parsed.data.status;
+    let shortCode = test.shortCode;
+
+    // PUBLISHED 전환 시 단축 코드 발급 (이미 있으면 유지)
+    if (nextStatus === "PUBLISHED" && !shortCode) {
+      shortCode = await allocateUniqueShortCode(prisma);
+    }
+
     const updated = await prisma.test.update({
       where: { id: testId },
       data: {
-        status: parsed.data.status,
-        ...(parsed.data.status === "PUBLISHED" && !test.publishedAt ? { publishedAt: new Date() } : {}),
-        ...(parsed.data.status === "CLOSED" ? { closedAt: new Date() } : {}),
+        status: nextStatus,
+        ...(shortCode && !test.shortCode ? { shortCode } : {}),
+        ...(nextStatus === "PUBLISHED" && !test.publishedAt ? { publishedAt: new Date() } : {}),
+        ...(nextStatus === "CLOSED" ? { closedAt: new Date() } : {}),
       },
-      select: { id: true, status: true, shareToken: true },
+      select: { id: true, status: true, shareToken: true, shortCode: true },
     });
 
     return NextResponse.json(updated);

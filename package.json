@@ -15,7 +15,8 @@
     "verify:clerk-webhook": "tsx scripts/verify-clerk-webhook.ts",
     "verify:anonymize-cron": "tsx scripts/verify-anonymize-cron.ts",
     "verify:ai-usage-alert": "tsx scripts/verify-ai-usage-alert.ts",
-    "verify:demo-rate-limit": "tsx scripts/verify-demo-rate-limit.ts"
+    "verify:demo-rate-limit": "tsx scripts/verify-demo-rate-limit.ts",
+    "verify:short-code": "tsx scripts/verify-short-code.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
