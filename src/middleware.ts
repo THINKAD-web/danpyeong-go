@@ -3,6 +3,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // 인증 없이 접근 가능한 경로
 const isPublic = createRouteMatcher([
   "/",
+  "/privacy",
   "/play(.*)",
   "/api/play(.*)",
 ]);

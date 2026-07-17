@@ -72,6 +72,16 @@ export default function Home() {
           </div>
         ))}
       </section>
+
+      {/* 푸터 */}
+      <footer className="mt-24 flex flex-col items-center gap-2 border-t-2 border-ink/10 pt-8 text-sm text-ink/50">
+        <div className="flex items-center gap-4">
+          <Link href="/privacy" className="font-bold text-ink/70 hover:text-brand">
+            개인정보처리방침
+          </Link>
+        </div>
+        <p className="text-ink/40">© 2026 단평GO</p>
+      </footer>
     </main>
   );
 }
