@@ -137,6 +137,9 @@ export default async function AdminPage() {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <Link href="/teacher/admin/units" className="text-sm text-ink/50 hover:text-ink transition">
+            단원 관리
+          </Link>
           <Link href="/teacher" className="text-sm text-ink/50 hover:text-ink transition">
             교사 대시보드
           </Link>
