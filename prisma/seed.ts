@@ -6,20 +6,57 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// ── 3학년 수학 (기존 데이터 유지) ────────────────────────
-const GRADE3_UNITS = [
-  { term: 1, order: 1, name: "덧셈과 뺄셈" },
-  { term: 1, order: 2, name: "평면도형" },
-  { term: 1, order: 3, name: "나눗셈" },
-  { term: 1, order: 4, name: "곱셈" },
-  { term: 1, order: 5, name: "길이와 시간" },
-  { term: 1, order: 6, name: "분수와 소수" },
-  { term: 2, order: 1, name: "곱셈" },
-  { term: 2, order: 2, name: "나눗셈" },
-  { term: 2, order: 3, name: "원" },
-  { term: 2, order: 4, name: "분수" },
-  { term: 2, order: 5, name: "들이와 무게" },
-  { term: 2, order: 6, name: "자료의 정리" },
+// ── 3학년 수학 ────────────────────────────────────────────
+// constraints: getUnitConstraints() 휴리스틱 내용을 단원별로 이전 + 단원 특화 보완
+const GRADE3_UNITS: { term: number; order: number; name: string; constraints: string }[] = [
+  {
+    term: 1, order: 1, name: "덧셈과 뺄셈",
+    constraints: "세 자리 수 범위(0~999) 내 덧셈·뺄셈. 받아올림·받아내림 검산 필수. 결과가 음수가 되는 뺄셈 금지.",
+  },
+  {
+    term: 1, order: 2, name: "평면도형",
+    constraints: "선분·반직선·직선, 각, 직각, 직각삼각형·직사각형·정사각형 등 3학년 평면도형 개념 중심. 넓이·둘레 공식(4학년 이상) 사용 금지. 변의 길이는 양의 정수(cm).",
+  },
+  {
+    term: 1, order: 3, name: "나눗셈",
+    constraints: "stem에 사용하는 수는 반드시 나누어 떨어지는 수만 선택하거나, 나머지를 묻는 형태로 명시할 것. 나누어 떨어지지 않는 수로 몫만 묻는 문항 절대 금지. 3학년 1학기 나눗셈 범위 내.",
+  },
+  {
+    term: 1, order: 4, name: "곱셈",
+    constraints: "3학년 1학기: (두 자리)×(한 자리) 범위. 올림이 발생하는 경우 각 자릿값 계산을 단계적으로 검산. 곱의 자릿수가 예상을 벗어나는 오류 주의.",
+  },
+  {
+    term: 1, order: 5, name: "길이와 시간",
+    constraints: "단위 변환 1m=100cm, 1km=1000m, 1시간=60분, 1분=60초 엄수. 결과가 음수가 되는 뺄셈 금지. 보기의 단위를 stem과 일치시킬 것.",
+  },
+  {
+    term: 1, order: 6, name: "분수와 소수",
+    constraints: "분모는 10 이하 자연수. 단위분수·크기 비교·소수(소수 한 자리) 중심. 약분·통분은 3학년 범위 초과이므로 사용 금지. 분수와 소수를 한 문항에서 혼용하지 않는다.",
+  },
+  {
+    term: 2, order: 1, name: "곱셈",
+    constraints: "3학년 2학기: (두·세 자리)×(한·두 자리) 범위. 올림이 발생하는 경우 각 자릿값 계산을 단계적으로 검산. 곱의 자릿수가 예상을 벗어나는 오류 주의.",
+  },
+  {
+    term: 2, order: 2, name: "나눗셈",
+    constraints: "stem에 사용하는 수는 반드시 나누어 떨어지는 수만 선택하거나, 나머지를 묻는 형태로 명시할 것. 나누어 떨어지지 않는 수로 몫만 묻는 문항 절대 금지. 3학년 2학기 나눗셈 범위 내.",
+  },
+  {
+    term: 2, order: 3, name: "원",
+    constraints: "원의 중심·반지름·지름 관계(지름=반지름×2) 중심. 원주율·원둘레·넓이 공식은 3학년 범위 초과이므로 사용 금지. 길이는 양의 정수.",
+  },
+  {
+    term: 2, order: 4, name: "분수",
+    constraints: "분모는 10 이하 자연수. 대분수·가분수 변환 포함 가능. 약분·통분은 3학년 범위 초과이므로 사용 금지. 소수와 혼용하지 않는다.",
+  },
+  {
+    term: 2, order: 5, name: "들이와 무게",
+    constraints: "단위 변환 1L=1000mL, 1kg=1000g 기준 엄수. 뺄셈 결과가 음수가 되는 상황 금지. 단위를 혼용(mL를 L로 쓰는 등)하지 않는다. 보기의 단위를 stem과 일치시킬 것.",
+  },
+  {
+    term: 2, order: 6, name: "자료의 정리",
+    constraints: "자료 수치는 양의 정수. 표·그림그래프 읽기·비교·합계 중심. 눈금 단위를 문제에 명확히 표시. 평균·비율 등 상위 학년 개념 사용 금지.",
+  },
 ];
 
 // ── 4학년 수학 (신규) ─────────────────────────────────────
@@ -87,7 +124,7 @@ async function main() {
     },
   });
 
-  // 3학년 수학 (기존 데이터 유지, name만 upsert)
+  // 3학년 수학 (name·constraints upsert — 기존 단원·문항 FK 보존)
   const subject3 = await prisma.subject.upsert({
     where: { name_grade: { name: "수학", grade: 3 } },
     update: {},
@@ -97,7 +134,7 @@ async function main() {
   for (const u of GRADE3_UNITS) {
     await prisma.unit.upsert({
       where: { subjectId_term_order: { subjectId: subject3.id, term: u.term, order: u.order } },
-      update: { name: u.name },
+      update: { name: u.name, constraints: u.constraints },
       create: { subjectId: subject3.id, ...u },
     });
   }
