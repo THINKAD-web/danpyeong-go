@@ -11,6 +11,8 @@ export default function NewTestPage() {
   const router = useRouter();
 
   const [term, setTerm] = useState(2);
+  // MVP: 3학년 고정. 학년 선택 UI는 다음 PR에서 도입 예정.
+  const grade = 3;
   const [units, setUnits] = useState<Unit[]>([]);
   const [unitsLoading, setUnitsLoading] = useState(true);
   const [unitsError, setUnitsError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function NewTestPage() {
   useEffect(() => {
     setUnitsLoading(true);
     setUnitsError(null);
-    fetch(`/api/units?term=${term}`)
+    fetch(`/api/units?grade=${grade}&term=${term}`)
       .then((r) => {
         if (!r.ok) throw new Error("단원 목록 오류");
         return r.json();
@@ -45,7 +47,7 @@ export default function NewTestPage() {
       })
       .catch(() => setUnitsError("단원 목록을 불러오지 못했어요."))
       .finally(() => setUnitsLoading(false));
-  }, [term]);
+  }, [term, grade]);
 
   const currentUnit = units.find((u) => u.id === unitId);
 
