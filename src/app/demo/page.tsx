@@ -89,8 +89,8 @@ export default function DemoPage() {
           AI 문항 생성 데모
         </h1>
         <p className="mt-2 text-sm text-ink/60">
-          단원을 고르면 AI가 샘플 문항 최대 3개를 만들어 보여줘요.
-          결과는 저장되지 않으며, IP당 하루 3회까지 체험할 수 있어요.
+          단원을 고르면 미리 준비된 AI 샘플 문항을 최대 3개 보여줘요.
+          가입 없이 바로 확인할 수 있고, 결과는 저장되지 않아요.
         </p>
       </header>
 
@@ -202,26 +202,20 @@ export default function DemoPage() {
               </p>
               <p className="mt-2 font-bold leading-relaxed">{q.stem}</p>
               {q.type === "MULTIPLE_CHOICE" && (
-                <ul className="mt-3 space-y-1.5 text-sm">
+                <ul className="mt-3 space-y-1.5 text-sm text-ink/70">
                   {q.choices.map((c) => (
-                    <li
-                      key={c.order}
-                      className={c.isCorrect ? "font-bold text-brand" : "text-ink/70"}
-                    >
+                    <li key={c.order}>
                       {c.order}. {c.text}
-                      {c.isCorrect ? " ✓" : ""}
                     </li>
                   ))}
                 </ul>
               )}
               {q.type === "SHORT_ANSWER" && (
-                <p className="mt-3 text-sm text-ink/60">
-                  정답 키워드: {q.answerKeywords.join(", ")}
-                </p>
+                <p className="mt-3 text-sm text-ink/50">단답형 샘플 — 정답은 가입 후 평가에서 확인해 주세요.</p>
               )}
               {q.explanation && (
                 <p className="mt-3 border-t border-ink/10 pt-3 text-sm text-ink/60">
-                  {q.explanation}
+                  해설 미리보기: {q.explanation}
                 </p>
               )}
             </article>

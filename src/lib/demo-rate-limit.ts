@@ -1,9 +1,8 @@
-// 공개 데모 AI 생성 비용 방어
+// 공개 데모 샘플 서빙 — Claude 비용 없음. 서버 부하만 완화.
 //
-//   DEMO_AI_DAILY_LIMIT_PER_IP   (기본 3)  — IP당 일일 호출
-//   DEMO_AI_DAILY_LIMIT_GLOBAL   (기본 50) — 데모 전체 일일 호출
+//   DEMO_AI_HOURLY_LIMIT_PER_IP  (기본 20) — IP당 시간당 호출
 //
-// AiUsageLog와 분리된 DemoAiUsageLog를 사용한다.
+// DemoAiUsageLog는 이용 현황 파악용으로 유지한다.
 
 import { createHash } from "crypto";
 import type { PrismaClient } from "@prisma/client";
@@ -20,8 +19,7 @@ function getLimit(envKey: string, defaultVal: number): number {
 
 export function getDemoLimits() {
   return {
-    perIp: getLimit("DEMO_AI_DAILY_LIMIT_PER_IP", 3),
-    global: getLimit("DEMO_AI_DAILY_LIMIT_GLOBAL", 50),
+    perIpPerHour: getLimit("DEMO_AI_HOURLY_LIMIT_PER_IP", 20),
   };
 }
 
@@ -40,10 +38,8 @@ export function clientIpFromHeaders(headers: {
   return headers.get("x-real-ip")?.trim() || "unknown";
 }
 
-function todayStart(now = new Date()): Date {
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  return d;
+function hourAgo(now = new Date()): Date {
+  return new Date(now.getTime() - 60 * 60 * 1000);
 }
 
 /** count를 1~DEMO_MAX_QUESTIONS로 강제 */
@@ -62,7 +58,7 @@ export type DemoRateLimitDeps = {
 
 export type DemoRateLimitResult =
   | { ok: true; ipHash: string }
-  | { ok: false; status: 429 | 503; error: string; hint?: string };
+  | { ok: false; status: 429; error: string; hint?: string };
 
 export async function checkDemoRateLimit(
   ip: string,
@@ -72,36 +68,26 @@ export async function checkDemoRateLimit(
   const ipHash = hashIp(ip);
   const progress = deps.inProgressSet ?? inProgress;
   const db = deps.prisma ?? prisma;
-  const since = todayStart(deps.now?.() ?? new Date());
+  const since = hourAgo(deps.now?.() ?? new Date());
 
   if (progress.has(ipHash)) {
     return {
       ok: false,
       status: 429,
-      error: "이미 문항을 생성하고 있어요. 잠시 후 다시 시도해 주세요.",
+      error: "이미 문항을 불러오고 있어요. 잠시 후 다시 시도해 주세요.",
     };
   }
 
-  const [ipCount, globalCount] = await Promise.all([
-    db.demoAiUsageLog.count({ where: { ipHash, createdAt: { gte: since } } }),
-    db.demoAiUsageLog.count({ where: { createdAt: { gte: since } } }),
-  ]);
+  const ipCount = await db.demoAiUsageLog.count({
+    where: { ipHash, createdAt: { gte: since } },
+  });
 
-  if (ipCount >= limits.perIp) {
+  if (ipCount >= limits.perIpPerHour) {
     return {
       ok: false,
       status: 429,
-      error: `오늘 체험 한도(${limits.perIp}회)에 도달했어요. 내일 다시 시도하거나 무료로 가입해 이용해 주세요.`,
-      hint: "가입하면 더 많은 문항을 만들고 평가로 배포할 수 있어요.",
-    };
-  }
-
-  if (globalCount >= limits.global) {
-    return {
-      ok: false,
-      status: 503,
-      error: "지금은 체험이 많아 잠시 후 다시 시도해주세요.",
-      hint: "가입하면 바로 문항을 만들 수 있어요.",
+      error: `잠시 요청이 많아요. 한 시간에 ${limits.perIpPerHour}회까지 체험할 수 있어요.`,
+      hint: "가입하면 제한 없이 문항을 만들고 평가로 배포할 수 있어요.",
     };
   }
 
