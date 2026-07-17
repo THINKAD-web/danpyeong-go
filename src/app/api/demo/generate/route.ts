@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { generateQuestions, validateQuestion } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 import {
   checkDemoRateLimit,
@@ -10,18 +9,19 @@ import {
   logDemoAiUsage,
   markDemoInProgress,
 } from "@/lib/demo-rate-limit";
+import { pickDemoSamples, toPublicDemoQuestion } from "@/lib/demo-samples";
 
 const DemoGenerateSchema = z.object({
   unitId: z.string().min(1),
   grade: z.number().int().min(3).max(4),
   term: z.number().int().min(1).max(2),
-  // 스키마상 여유 있게 받고, 서버에서 3 이하로 clamp
   count: z.number().int().min(1).max(20).optional().default(3),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).default("MEDIUM"),
   type: z.enum(["MULTIPLE_CHOICE", "SHORT_ANSWER"]).default("MULTIPLE_CHOICE"),
 });
 
-// POST /api/demo/generate — 인증 불필요, DB 저장 없음, 엄격한 rate limit
+// POST /api/demo/generate
+// 사전 생성 샘플만 반환 — Claude API 호출 없음, Question 테이블 저장 없음
 export async function POST(req: NextRequest) {
   let ipHash: string | null = null;
 
@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
     }
     ipHash = limitCheck.ipHash;
 
-    // 허용 단원만: 수학 3·4학년 + 요청 grade/term 일치
     const unit = await prisma.unit.findFirst({
       where: {
         id: parsed.data.unitId,
@@ -53,7 +52,7 @@ export async function POST(req: NextRequest) {
         term: parsed.data.term,
         subject: { name: "수학", grade: parsed.data.grade },
       },
-      select: { name: true, constraints: true },
+      select: { id: true, name: true },
     });
     if (!unit) {
       return NextResponse.json(
@@ -63,49 +62,52 @@ export async function POST(req: NextRequest) {
     }
 
     const count = clampDemoCount(parsed.data.count);
-    const unitConstraints = unit.constraints ?? undefined;
 
     markDemoInProgress(ipHash);
-    let questions;
+    let publicQuestions;
     try {
-      questions = await generateQuestions({
-        unitId: parsed.data.unitId,
-        grade: parsed.data.grade,
-        term: parsed.data.term,
-        count,
-        difficulty: parsed.data.difficulty,
-        type: parsed.data.type,
-        unitName: unit.name,
-        unitConstraints,
+      const samples = await prisma.demoSampleQuestion.findMany({
+        where: { unitId: unit.id },
       });
+
+      if (samples.length === 0) {
+        return NextResponse.json(
+          {
+            error: "이 단원 샘플은 준비 중입니다.",
+            hint: "다른 단원을 골라 보시거나, 가입 후 직접 AI로 문항을 만들어 보세요.",
+          },
+          { status: 404 }
+        );
+      }
+
+      const picked = pickDemoSamples(samples, count, parsed.data.type);
+      publicQuestions = picked.map(toPublicDemoQuestion);
     } finally {
       clearDemoInProgress(ipHash);
     }
 
-    const valid = questions.filter((q) => validateQuestion(q) === null);
-
-    // 사용량만 기록 — Question/Test 저장 없음
     logDemoAiUsage({
       ipHash,
       unitId: parsed.data.unitId,
-      model: "claude-sonnet-4-6",
-      questionCount: count,
+      model: "demo-sample",
+      questionCount: publicQuestions.length,
       questionType: parsed.data.type,
     }).catch((e) => console.error("[demo-generate] 로그 기록 실패:", e));
 
     return NextResponse.json({
-      questions: valid,
-      generated: questions.length,
-      kept: valid.length,
-      saved: 0, // 데모는 항상 0 — DB 미저장
+      questions: publicQuestions,
+      generated: publicQuestions.length,
+      kept: publicQuestions.length,
+      saved: 0,
       demo: true,
-      countUsed: count,
+      countUsed: publicQuestions.length,
+      fromSamples: true,
     });
   } catch (err) {
     if (ipHash) clearDemoInProgress(ipHash);
     console.error("[/api/demo/generate]", err);
     return NextResponse.json(
-      { error: "문항 생성 중 오류가 발생했습니다." },
+      { error: "문항을 불러오는 중 오류가 발생했습니다." },
       { status: 500 }
     );
   }

@@ -72,7 +72,8 @@ model Unit {
   // soft-delete: 기존 문항이 있는 단원을 실수로 삭제하는 것 방지
   isArchived   Boolean  @default(false)
 
-  questions Question[]
+  questions    Question[]
+  demoSamples  DemoSampleQuestion[]
 
   @@unique([subjectId, term, order])
   @@index([subjectId])
@@ -296,6 +297,24 @@ model DemoAiUsageLog {
 
   @@index([ipHash, createdAt])
   @@index([createdAt])
+}
+
+// 공개 데모용 사전 생성 샘플 문항 (런타임 Claude 호출 없음)
+model DemoSampleQuestion {
+  id             String         @id @default(cuid())
+  unitId         String
+  unit           Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  type           QuestionType
+  difficulty     Difficulty     @default(MEDIUM)
+  stem           String         @db.Text
+  // [{ order, text, isCorrect }] — 저장은 하되 API 응답에서는 isCorrect 제거
+  choicesJson    Json
+  answerKeywords String[]       @default([])
+  explanation    String?        @db.Text
+  createdAt      DateTime       @default(now())
+
+  @@index([unitId])
+  @@index([unitId, type])
 }
 
 // 6자리 shortCode 브루트포스 완화 — IP(해시)별 최근 시도 기록
