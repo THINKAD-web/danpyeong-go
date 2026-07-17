@@ -6,13 +6,22 @@ import { useEffect, useState } from "react";
 import type { GeneratedQuestion } from "@/lib/ai";
 
 type Unit = { id: string; term: number; order: number; name: string };
+type Subject = { name: string; grade: number };
+
+// 학년/과목 조합을 select value 로 쓰기 위한 안정적인 키
+const subjectKey = (s: Subject) => `${s.grade}::${s.name}`;
 
 export default function NewTestPage() {
   const router = useRouter();
 
   const [term, setTerm] = useState(2);
-  // MVP: 3학년 고정. 학년 선택 UI는 다음 PR에서 도입 예정.
-  const grade = 3;
+
+  // 학년/과목: DB(/api/subjects)에서 동적으로 조회
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(true);
+  const [subjectsError, setSubjectsError] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState("");
+
   const [units, setUnits] = useState<Unit[]>([]);
   const [unitsLoading, setUnitsLoading] = useState(true);
   const [unitsError, setUnitsError] = useState<string | null>(null);
@@ -32,27 +41,57 @@ export default function NewTestPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // 학기 변경 시 단원 목록 재조회
+  // 마운트 시 학년/과목 목록 조회
   useEffect(() => {
+    setSubjectsLoading(true);
+    setSubjectsError(null);
+    fetch("/api/subjects")
+      .then((r) => {
+        if (!r.ok) throw new Error("과목 목록 오류");
+        return r.json();
+      })
+      .then((data: { subjects: Subject[] }) => {
+        setSubjects(data.subjects);
+        if (data.subjects.length > 0) setSelectedKey(subjectKey(data.subjects[0]));
+      })
+      .catch(() => setSubjectsError("과목 목록을 불러오지 못했어요."))
+      .finally(() => setSubjectsLoading(false));
+  }, []);
+
+  const selectedSubject = subjects.find((s) => subjectKey(s) === selectedKey) ?? null;
+
+  // 학년/과목 또는 학기 변경 시 단원 목록 재조회
+  useEffect(() => {
+    if (!selectedSubject) {
+      setUnits([]);
+      setUnitId("");
+      setUnitsLoading(false);
+      return;
+    }
     setUnitsLoading(true);
     setUnitsError(null);
-    fetch(`/api/units?grade=${grade}&term=${term}`)
+    const params = new URLSearchParams({
+      grade: String(selectedSubject.grade),
+      subject: selectedSubject.name,
+      term: String(term),
+    });
+    fetch(`/api/units?${params.toString()}`)
       .then((r) => {
         if (!r.ok) throw new Error("단원 목록 오류");
         return r.json();
       })
       .then((data: { units: Unit[] }) => {
         setUnits(data.units);
-        if (data.units.length > 0) setUnitId(data.units[0].id);
+        setUnitId(data.units.length > 0 ? data.units[0].id : "");
       })
       .catch(() => setUnitsError("단원 목록을 불러오지 못했어요."))
       .finally(() => setUnitsLoading(false));
-  }, [term, grade]);
+  }, [term, selectedKey, selectedSubject]);
 
   const currentUnit = units.find((u) => u.id === unitId);
 
   async function handleGenerate() {
-    if (!currentUnit) return;
+    if (!currentUnit || !selectedSubject) return;
     setLoading(true);
     setError(null);
     setQuestions([]);
@@ -63,6 +102,8 @@ export default function NewTestPage() {
         body: JSON.stringify({
           unitId,
           unitName: currentUnit.name,
+          grade: selectedSubject.grade,
+          subject: selectedSubject.name,
           term,
           count,
           difficulty,
@@ -120,6 +161,30 @@ export default function NewTestPage() {
 
       {/* 생성 조건 */}
       <div className="card mt-8 space-y-5 p-6">
+        <Field label="학년·과목">
+          {subjectsLoading ? (
+            <div className="select flex items-center text-ink/40">불러오는 중…</div>
+          ) : subjectsError ? (
+            <div className="select flex items-center text-sm text-coral">{subjectsError}</div>
+          ) : subjects.length === 0 ? (
+            <div className="select flex items-center text-sm text-ink/50">
+              등록된 과목이 없어요. 관리자에게 과목·단원 등록을 요청해 주세요.
+            </div>
+          ) : (
+            <select
+              value={selectedKey}
+              onChange={(e) => setSelectedKey(e.target.value)}
+              className="select"
+            >
+              {subjects.map((s) => (
+                <option key={subjectKey(s)} value={subjectKey(s)}>
+                  {s.grade}학년 · {s.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+
         <div className="flex gap-3">
           <Field label="학기">
             <select value={term} onChange={(e) => setTerm(Number(e.target.value))} className="select">
@@ -169,7 +234,14 @@ export default function NewTestPage() {
 
         <button
           onClick={handleGenerate}
-          disabled={loading || unitsLoading || !!unitsError || !unitId}
+          disabled={
+            loading ||
+            subjectsLoading ||
+            !selectedSubject ||
+            unitsLoading ||
+            !!unitsError ||
+            !unitId
+          }
           className="card w-full bg-brand py-3 font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-50"
         >
           {loading ? "생성 중…" : "✨ AI로 문항 생성"}
