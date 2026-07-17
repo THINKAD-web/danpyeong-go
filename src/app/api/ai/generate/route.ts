@@ -8,11 +8,11 @@ import { currentTeacher } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // POST /api/ai/generate
-// body: { unitId, unitName, term, count, difficulty, type }
+// body: { unitId, unitName, grade, subject, term, count, difficulty, type }
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const parsed = GenerateInputSchema.safeParse(body);
+    const parsed = GenerateInputSchema.omit({ achievementStandard: true }).safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "입력값이 올바르지 않습니다.", detail: parsed.error.flatten() },
@@ -20,7 +20,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const questions = await generateQuestions(parsed.data);
+    // Unit.achievementStandard 가 있으면 프롬프트에 주입 (없으면 폴백 문구)
+    const unit = await prisma.unit.findUnique({
+      where: { id: parsed.data.unitId },
+      select: { achievementStandard: true },
+    });
+
+    const input = {
+      ...parsed.data,
+      achievementStandard: unit?.achievementStandard ?? undefined,
+    };
+
+    const questions = await generateQuestions(input);
 
     // 품질 가드: validateQuestion 통과한 문항만 사용
     const valid = questions.filter((q) => validateQuestion(q) === null);

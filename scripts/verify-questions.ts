@@ -83,19 +83,19 @@ const FAKE_UNIT_ID = "verify-script";
 const cases: TestCase[] = [
   {
     label: "곱셈/중",
-    input: { unitId: FAKE_UNIT_ID, unitName: "곱셈 (두 자리 수 × 한 자리 수)", term: 1, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
+    input: { unitId: FAKE_UNIT_ID, unitName: "곱셈 (두 자리 수 × 한 자리 수)", grade: 3, subject: "수학", term: 1, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
   },
   {
     label: "나눗셈/상",
-    input: { unitId: FAKE_UNIT_ID, unitName: "나눗셈", term: 1, count: 5, difficulty: "HARD", type: "MULTIPLE_CHOICE" },
+    input: { unitId: FAKE_UNIT_ID, unitName: "나눗셈", grade: 3, subject: "수학", term: 1, count: 5, difficulty: "HARD", type: "MULTIPLE_CHOICE" },
   },
   {
     label: "분수/중",
-    input: { unitId: FAKE_UNIT_ID, unitName: "분수", term: 2, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
+    input: { unitId: FAKE_UNIT_ID, unitName: "분수", grade: 3, subject: "수학", term: 2, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
   },
   {
     label: "들이무게/중",
-    input: { unitId: FAKE_UNIT_ID, unitName: "들이와 무게", term: 2, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
+    input: { unitId: FAKE_UNIT_ID, unitName: "들이와 무게", grade: 3, subject: "수학", term: 2, count: 5, difficulty: "MEDIUM", type: "MULTIPLE_CHOICE" },
   },
 ];
 
