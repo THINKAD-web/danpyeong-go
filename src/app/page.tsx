@@ -42,6 +42,15 @@ export default function Home() {
         <p className="mt-4 text-sm text-ink/40">
           * 교사 로그인 후 이용 가능합니다. 학생은 코드 입력만으로 응시할 수 있어요.
         </p>
+
+        <div className="mt-8 flex justify-center">
+          <span className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-mint/30 px-4 py-1.5 text-sm font-bold">
+            🎉 베타 기간 — 무료 제공 중
+          </span>
+        </div>
+        <p className="mx-auto mt-2 max-w-md text-xs text-ink/40">
+          정식 서비스 전환 시 사전 안내 후 요금제가 도입될 수 있어요.
+        </p>
       </section>
 
       {/* 3단계 흐름 */}
