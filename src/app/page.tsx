@@ -5,7 +5,7 @@ const FEATURES = [
   {
     icon: "📐",
     title: "2022 개정 교육과정 기준",
-    desc: "3학년 수학 12개 단원, 성취기준에 맞춰 문항이 생성됩니다.",
+    desc: "초등 3~4학년 수학 단원, 성취기준에 맞춰 문항이 생성됩니다.",
   },
   {
     icon: "🔍",
@@ -87,7 +87,7 @@ export default function Home() {
       <section className="mx-auto max-w-5xl px-6 pb-16 pt-12 text-center sm:pt-20">
         {/* 배지 */}
         <span className="inline-block rounded-full border-2 border-brand/30 bg-brand/5 px-4 py-1 text-sm font-bold text-brand">
-          초등학교 3학년 수학 · 2022 개정 교육과정
+          초등학교 3~4학년 수학 · 2022 개정 교육과정
         </span>
 
         <h1 className="font-display mt-6 text-5xl font-bold leading-tight sm:text-6xl md:text-7xl">
