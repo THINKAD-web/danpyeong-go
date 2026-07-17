@@ -200,6 +200,11 @@ export default function Home() {
           단평<span className="text-coral">GO</span>
         </p>
         <p className="mt-1">초등 교사를 위한 AI 단원평가 도구</p>
+        <p className="mt-3">
+          <Link href="/privacy" className="font-bold text-ink/60 hover:text-brand">
+            개인정보처리방침
+          </Link>
+        </p>
       </footer>
     </div>
   );
