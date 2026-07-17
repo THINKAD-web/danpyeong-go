@@ -8,6 +8,7 @@
 //   AI_DAILY_LIMIT_PER_USER=2 AI_DAILY_LIMIT_GLOBAL=5 npm run dev
 
 import { prisma } from "./prisma";
+import { maybeNotifyAiGlobalThreshold } from "./ai-usage-alert";
 
 // ── 설정값 ───────────────────────────────────────────────
 function getLimit(envKey: string, defaultVal: number): number {
@@ -92,6 +93,9 @@ export async function checkRateLimit(userId: string): Promise<RateLimitResult> {
     getUserDailyCount(userId),
     getGlobalDailyCount(),
   ]);
+
+  // 80% 임계치 Slack 알림 — 실패해도 rate-limit 판정에 영향 없음
+  await maybeNotifyAiGlobalThreshold(globalCount, limits.global);
 
   if (userCount >= limits.perUser) {
     return {
