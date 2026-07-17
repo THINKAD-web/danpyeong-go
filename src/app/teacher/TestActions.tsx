@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { copyToClipboard, playEntryUrl } from "@/lib/play-share";
 
 type Status = "DRAFT" | "PUBLISHED" | "CLOSED";
+type CopiedKind = "code" | "link" | null;
 
 export function TestActions({
   testId,
@@ -21,7 +23,7 @@ export function TestActions({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<CopiedKind>(null);
   const [deleting, setDeleting] = useState(false);
 
   async function changeStatus(next: Status) {
@@ -38,12 +40,19 @@ export function TestActions({
     }
   }
 
-  function handleShare() {
-    const url = `${window.location.origin}/play`;
-    navigator.clipboard.writeText(`시험 코드: ${shareToken}\n응시: ${url}`).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+  function flashCopied(kind: CopiedKind) {
+    setCopied(kind);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  async function handleCopyCode() {
+    await copyToClipboard(shareToken);
+    flashCopied("code");
+  }
+
+  async function handleCopyLink() {
+    await copyToClipboard(playEntryUrl(window.location.origin));
+    flashCopied("link");
   }
 
   async function handleDelete() {
@@ -73,7 +82,7 @@ export function TestActions({
 
   return (
     <div className="flex flex-col items-end gap-1.5">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 justify-end">
         <Link
           href={`/teacher/test/${testId}/results`}
           className="card bg-white px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5"
@@ -90,21 +99,13 @@ export function TestActions({
           </button>
         )}
         {status === "PUBLISHED" && (
-          <>
-            <button
-              onClick={handleShare}
-              className="card bg-sun/40 px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5"
-            >
-              {copied ? "✓ 복사됨" : "공유"}
-            </button>
-            <button
-              onClick={() => changeStatus("CLOSED")}
-              disabled={loading}
-              className="card bg-ink/10 px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              마감
-            </button>
-          </>
+          <button
+            onClick={() => changeStatus("CLOSED")}
+            disabled={loading}
+            className="card bg-ink/10 px-4 py-2 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-50"
+          >
+            마감
+          </button>
         )}
         {status === "CLOSED" && (
           <span className="px-4 py-2 text-sm text-ink/40">마감됨</span>
@@ -117,11 +118,27 @@ export function TestActions({
           {deleting ? "삭제 중…" : "삭제"}
         </button>
       </div>
-      {/* 배포 중인 테스트에 코드를 항상 노출 — 카톡/알림장 공유 시 참고 */}
+      {/* 배포 중: 코드 상시 노출 + 코드/링크 단독 복사 */}
       {status === "PUBLISHED" && (
-        <p className="text-xs text-ink/40 text-right">
-          코드: <span className="font-bold tracking-wider text-ink/60">{shareToken}</span>
-        </p>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <p className="text-xs text-ink/40">
+            코드: <span className="font-bold tracking-wider text-ink/60">{shareToken}</span>
+          </p>
+          <button
+            type="button"
+            onClick={handleCopyCode}
+            className="card bg-sun/40 px-3 py-1 text-xs font-bold transition hover:-translate-y-0.5"
+          >
+            {copied === "code" ? "✓ 복사됨" : "코드만 복사"}
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="card bg-white px-3 py-1 text-xs font-bold transition hover:-translate-y-0.5"
+          >
+            {copied === "link" ? "✓ 복사됨" : "링크 복사"}
+          </button>
+        </div>
       )}
     </div>
   );
