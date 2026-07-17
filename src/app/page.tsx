@@ -110,6 +110,12 @@ export default function Home() {
             👩‍🏫 교사로 시작하기 — 무료
           </Link>
           <Link
+            href="/demo"
+            className="card bg-sun/40 px-8 py-4 text-lg font-bold transition hover:-translate-y-1 active:translate-y-0"
+          >
+            ✨ 무료로 체험해보기
+          </Link>
+          <Link
             href="/play"
             className="card bg-white px-8 py-4 text-lg font-bold transition hover:-translate-y-1 active:translate-y-0"
           >
@@ -118,7 +124,7 @@ export default function Home() {
         </div>
 
         <p className="mt-4 text-sm text-ink/40">
-          교사는 Clerk 소셜 로그인으로 시작 · 학생은 코드+이름만으로 응시
+          가입 전 AI 문항 생성 체험 가능 · 학생은 코드+이름만으로 응시
         </p>
 
         <div className="mt-8 flex justify-center">
