@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { TestActions } from "./TestActions";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { NextStepBanner } from "@/components/NextStepBanner";
+import { allocateUniqueShortCode } from "@/lib/short-code";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ async function getTeacherData() {
       title: true,
       status: true,
       shareToken: true,
+      shortCode: true,
       _count: { select: { questions: true, attempts: true } },
       attempts: {
         where: { status: "SUBMITTED" },
@@ -37,6 +39,22 @@ async function getTeacherData() {
       },
     },
   });
+
+  // 이미 PUBLISHED인데 shortCode가 없는 기존 평가 — 대시보드 로드 시 백필
+  for (const t of tests) {
+    if (t.status === "PUBLISHED" && !t.shortCode) {
+      try {
+        const code = await allocateUniqueShortCode(prisma);
+        await prisma.test.update({
+          where: { id: t.id },
+          data: { shortCode: code },
+        });
+        t.shortCode = code;
+      } catch (err) {
+        console.error("[teacher] shortCode backfill failed", t.id, err);
+      }
+    }
+  }
 
   return {
     teacher,
@@ -57,6 +75,7 @@ async function getTeacherData() {
         title: t.title,
         status: t.status as "DRAFT" | "PUBLISHED" | "CLOSED",
         shareToken: t.shareToken,
+        shortCode: t.shortCode,
         questionCount: t._count.questions,
         attemptCount,
         totalAttemptCount: t._count.attempts,
@@ -138,7 +157,11 @@ export default async function TeacherDashboard() {
               <NextStepBanner kind="deploy" />
             )}
             {hasPublishedWithNoAttempts && (
-              <NextStepBanner kind="share" shareToken={firstPublished?.shareToken} />
+              <NextStepBanner
+                kind="share"
+                shortCode={firstPublished?.shortCode}
+                shareToken={firstPublished?.shareToken}
+              />
             )}
 
             {tests.map((t) => {
@@ -166,6 +189,7 @@ export default async function TeacherDashboard() {
                     testId={t.id}
                     status={t.status}
                     shareToken={t.shareToken}
+                    shortCode={t.shortCode}
                     title={t.title}
                     attemptCount={t.totalAttemptCount}
                   />

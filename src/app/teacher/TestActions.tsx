@@ -12,12 +12,14 @@ export function TestActions({
   testId,
   status,
   shareToken,
+  shortCode,
   title,
   attemptCount,
 }: {
   testId: string;
   status: Status;
   shareToken: string;
+  shortCode: string | null;
   title: string;
   attemptCount: number;
 }) {
@@ -25,6 +27,9 @@ export function TestActions({
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<CopiedKind>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // 구두 전달용 단축 코드 우선, 없으면 기존 shareToken
+  const displayCode = shortCode ?? shareToken;
 
   async function changeStatus(next: Status) {
     setLoading(true);
@@ -46,7 +51,7 @@ export function TestActions({
   }
 
   async function handleCopyCode() {
-    await copyToClipboard(shareToken);
+    await copyToClipboard(displayCode);
     flashCopied("code");
   }
 
@@ -118,11 +123,14 @@ export function TestActions({
           {deleting ? "삭제 중…" : "삭제"}
         </button>
       </div>
-      {/* 배포 중: 코드 상시 노출 + 코드/링크 단독 복사 */}
+      {/* 배포 중: 6자리 단축 코드 상시 노출 + 코드/링크 단독 복사 */}
       {status === "PUBLISHED" && (
         <div className="flex flex-wrap items-center justify-end gap-2">
           <p className="text-xs text-ink/40">
-            코드: <span className="font-bold tracking-wider text-ink/60">{shareToken}</span>
+            코드:{" "}
+            <span className="font-bold tracking-wider text-ink/60 tabular-nums">
+              {displayCode}
+            </span>
           </p>
           <button
             type="button"

@@ -45,7 +45,7 @@ export default function PlayEntryPage() {
       <div className="card w-full max-w-md p-6 sm:p-8">
         <h1 className="font-display text-2xl font-bold">테스트 응시하기</h1>
         <p className="mt-1 text-sm text-ink/60">
-          선생님이 알려준 코드와 이름을 입력하세요.
+          6자리 코드 또는 공유 링크의 코드를 입력하세요.
         </p>
 
         <div className="mt-6 space-y-4">
@@ -57,7 +57,7 @@ export default function PlayEntryPage() {
               id="share-token"
               value={shareToken}
               onChange={(e) => setShareToken(e.target.value)}
-              placeholder="선생님이 알려준 코드"
+              placeholder="예: 482931"
               // autocomplete off: 코드칸에 이전 이름 제안 방지
               autoComplete="off"
               autoCapitalize="characters"
