@@ -269,3 +269,14 @@ model AiUsageLog {
   @@index([createdAt])
   @@index([userId, createdAt])
 }
+
+// 운영 알림 중복 방지 — (key, day) 유니크로 하루 1회만 발송
+model OpsAlertDay {
+  id        String   @id @default(cuid())
+  key       String // 예: "ai_global_80"
+  day       String // Asia/Seoul 기준 YYYY-MM-DD
+  createdAt DateTime @default(now())
+
+  @@unique([key, day])
+  @@index([key])
+}
