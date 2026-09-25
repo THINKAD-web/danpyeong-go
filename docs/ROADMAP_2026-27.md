@@ -12,7 +12,7 @@
 | 1-1 | 데모 단원 목록 정적화 | ✅ | `src/lib/curriculum.ts` (seed 와 공용). `/api/demo/generate` 는 `grade+term+order` 로 단원 매칭 (`unitId` 도 계속 허용) |
 | 1-1 | 데모 결과에 샘플 리포트 | ✅ | `ReportPreview` 컴포넌트 (이미지 대신 실제 화면 축소 재현) |
 | 1-2 | 3단계 섹션 화면 미리보기 | ✅ | `src/components/ProductPreviews.tsx` — 생성 / 배포 / 리포트 |
-| 1-2 | 사회적 증거 섹션 | 🟡 | 이용 숫자는 DB 집계로 자동 표시 (1시간 캐시). **후기는 실제 교사 동의를 받은 뒤** `src/app/page.tsx` 의 `TESTIMONIALS` 에 추가 — 비어 있으면 숨김 |
+| 1-2 | 사회적 증거 섹션 | 🟡 | 이용 숫자는 DB 집계로 자동 표시 (1시간 캐시). **후기는 실제 교사 동의를 받은 뒤** `src/app/page.tsx` 의 `TESTIMONIALS` 에 추가. 후기가 비어 있어도 이용 숫자는 표시되고 후기 카드만 빠짐 (배치: 왜 단평GO인가요? → 이용 숫자·후기 → CTA) |
 | 1-2 | 요금 문구 변경 | ✅ | "오픈 베타 — 무료 사용 중 / 기본 기능은 정식 전환 후에도 계속 무료" |
 | 1-3 | 전용 도메인 | 🟡 | 코드: `NEXT_PUBLIC_SITE_URL` → `metadataBase`. **운영 절차는 아래 「전용 도메인 전환 순서」** |
 | 1-4 | 출석번호만 모드 | 🟡 | `Test.studentIdMode` (NAME/NUMBER). 교사 대시보드에서 응시 기록이 생기기 전까지 전환 가능. 학생은 1~99 입력 → `"12번"` 저장. **운영**: 개인정보 전문가 확인 |
