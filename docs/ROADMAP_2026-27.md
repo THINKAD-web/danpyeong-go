@@ -14,8 +14,20 @@
 | 1-2 | 3단계 섹션 화면 미리보기 | ✅ | `src/components/ProductPreviews.tsx` — 생성 / 배포 / 리포트 |
 | 1-2 | 사회적 증거 섹션 | 🟡 | 이용 숫자는 DB 집계로 자동 표시 (1시간 캐시). **후기는 실제 교사 동의를 받은 뒤** `src/app/page.tsx` 의 `TESTIMONIALS` 에 추가 — 비어 있으면 숨김 |
 | 1-2 | 요금 문구 변경 | ✅ | "오픈 베타 — 무료 사용 중 / 기본 기능은 정식 전환 후에도 계속 무료" |
-| 1-3 | 전용 도메인 | 🟡 | 코드: `NEXT_PUBLIC_SITE_URL` → `metadataBase`. **운영**: 도메인 구매 → Vercel Domains 에 추가 → 기존 `*.vercel.app` 을 새 도메인으로 308 리디렉트 설정 → `NEXT_PUBLIC_SITE_URL` 등록 → Clerk 에 새 도메인 추가 |
+| 1-3 | 전용 도메인 | 🟡 | 코드: `NEXT_PUBLIC_SITE_URL` → `metadataBase`. **운영 절차는 아래 「전용 도메인 전환 순서」** |
 | 1-4 | 출석번호만 모드 | 🟡 | `Test.studentIdMode` (NAME/NUMBER). 교사 대시보드에서 응시 기록이 생기기 전까지 전환 가능. 학생은 1~99 입력 → `"12번"` 저장. **운영**: 개인정보 전문가 확인 |
+
+### 전용 도메인 전환 순서 (1-3)
+
+Clerk 인증 도메인을 먼저 준비한다. Clerk 설정 전에 새 도메인으로 접속이 열리면 교사 로그인이 깨진다.
+
+1. 도메인 구매 (예: `danpyeong.kr`)
+2. **Clerk 먼저**: Clerk Dashboard → Production 인스턴스 → Domains 에서 새 도메인 설정 → 안내된 CNAME 레코드(`clerk.`, `accounts.`, 메일 DKIM 등)를 DNS 에 등록 → Clerk 화면에서 모든 레코드 **Verified** 확인 (SSL 발급까지 대기)
+3. Clerk 키가 바뀌었다면 `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`·`CLERK_SECRET_KEY` 를 Vercel 환경변수에 반영. Clerk 웹훅(`/api/webhooks/clerk`) 엔드포인트 URL 도 새 도메인으로 변경 (`CLERK_WEBHOOK_SECRET` 이 바뀌면 함께 갱신)
+4. Vercel → Domains 에 새 도메인 추가 → apex/`www` DNS 레코드 등록 → 전파 확인
+5. Vercel Production 환경변수 `NEXT_PUBLIC_SITE_URL=https://danpyeong.kr` 등록 후 재배포
+6. 새 도메인에서 교사 로그인·가입·로그아웃, 학생 응시(`/play`), 데모(`/demo`) 확인
+7. **마지막에** 기존 `danpyeong-go.vercel.app` → 새 도메인 308 리디렉트 설정 (Vercel Domains). 이미 공유된 링크·설치된 PWA 가 새 도메인으로 넘어간다
 
 ## Phase 2 · 수익모델 (11~12월)
 
