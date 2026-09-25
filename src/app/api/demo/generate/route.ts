@@ -11,14 +11,20 @@ import {
 } from "@/lib/demo-rate-limit";
 import { pickDemoSamples, toPublicDemoQuestion } from "@/lib/demo-samples";
 
-const DemoGenerateSchema = z.object({
-  unitId: z.string().min(1),
-  grade: z.number().int().min(3).max(4),
-  term: z.number().int().min(1).max(2),
+const DemoGenerateSchema = z
+  .object({
+    // unitId(구버전 클라이언트) 또는 order(정적 단원 목록 기준, term 과 함께 매칭)
+    unitId: z.string().min(1).optional(),
+    order: z.number().int().min(1).max(20).optional(),
+    grade: z.number().int().min(3).max(4),
+    term: z.number().int().min(1).max(2),
   count: z.number().int().min(1).max(20).optional().default(3),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).default("MEDIUM"),
-  type: z.enum(["MULTIPLE_CHOICE", "SHORT_ANSWER"]).default("MULTIPLE_CHOICE"),
-});
+    type: z.enum(["MULTIPLE_CHOICE", "SHORT_ANSWER"]).default("MULTIPLE_CHOICE"),
+  })
+  .refine((d) => d.unitId !== undefined || d.order !== undefined, {
+    message: "unitId 또는 order 가 필요합니다.",
+  });
 
 // POST /api/demo/generate
 // 사전 생성 샘플만 반환 — Claude API 호출 없음, Question 테이블 저장 없음
@@ -47,7 +53,9 @@ export async function POST(req: NextRequest) {
 
     const unit = await prisma.unit.findFirst({
       where: {
-        id: parsed.data.unitId,
+        ...(parsed.data.unitId !== undefined
+          ? { id: parsed.data.unitId }
+          : { order: parsed.data.order }),
         isArchived: false,
         term: parsed.data.term,
         subject: { name: "수학", grade: parsed.data.grade },
@@ -88,7 +96,7 @@ export async function POST(req: NextRequest) {
 
     logDemoAiUsage({
       ipHash,
-      unitId: parsed.data.unitId,
+      unitId: unit.id,
       model: "demo-sample",
       questionCount: publicQuestions.length,
       questionType: parsed.data.type,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { STUDENT_NUMBER_REQUIRED } from "@/lib/student-id";
 
 export default function PlayEntryPage() {
   const router = useRouter();
@@ -10,6 +11,8 @@ export default function PlayEntryPage() {
   const [studentName, setStudentName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 선생님이 "출석번호만" 모드로 배포한 평가면 서버 응답을 받고 번호 입력으로 전환
+  const [numberMode, setNumberMode] = useState(false);
 
   async function handleStart() {
     if (!shareToken.trim() || !studentName.trim()) return;
@@ -23,6 +26,12 @@ export default function PlayEntryPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.code === STUDENT_NUMBER_REQUIRED && !numberMode) {
+          setNumberMode(true);
+          setStudentName("");
+          setError("이 평가는 이름 대신 출석번호만 입력해요.");
+          return;
+        }
         setError(data.error ?? "오류가 발생했습니다.");
         return;
       }
@@ -68,16 +77,16 @@ export default function PlayEntryPage() {
           </div>
           <div>
             <label htmlFor="student-name" className="mb-1 block text-sm font-bold text-ink/70">
-              이름
+              {numberMode ? "출석번호" : "이름"}
             </label>
             <input
               id="student-name"
               value={studentName}
               onChange={(e) => setStudentName(e.target.value)}
-              placeholder="홍길동"
-              maxLength={20}
-              autoComplete="name"
-              inputMode="text"
+              placeholder={numberMode ? "예: 12" : "홍길동"}
+              maxLength={numberMode ? 3 : 20}
+              autoComplete={numberMode ? "off" : "name"}
+              inputMode={numberMode ? "numeric" : "text"}
               className="w-full rounded-xl border-2 border-ink px-4 py-3.5 text-lg font-bold focus:outline-none focus:border-brand"
               onKeyDown={(e) => e.key === "Enter" && handleStart()}
             />

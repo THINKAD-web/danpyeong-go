@@ -1,4 +1,15 @@
 import Link from "next/link";
+import { GeneratePreview, ReportPreview, SharePreview } from "@/components/ProductPreviews";
+import { getPublicStats, type PublicStats } from "@/lib/public-stats";
+
+// 사회적 증거 숫자는 DB 집계 — 1시간 단위로만 다시 계산
+export const revalidate = 3600;
+
+// ── 베타 교사 후기 ──────────────────────────────────────────
+// ⚠️ 실제 교사에게 받은, 게재 동의를 받은 후기만 넣는다 (지어낸 후기 금지).
+// 비어 있으면 후기 카드는 숨겨지고 이용 숫자만 표시된다.
+// 예: { quote: "…", author: "서울 ○○초 3학년 담임" }
+const TESTIMONIALS: { quote: string; author: string }[] = [];
 
 // ── 차별점 데이터 ─────────────────────────────────────────
 const FEATURES = [
@@ -15,7 +26,7 @@ const FEATURES = [
   {
     icon: "👤",
     title: "학생 로그인 불필요",
-    desc: "학생은 시험 코드와 이름만 입력하면 바로 응시. 계정 만들 필요 없습니다.",
+    desc: "학생은 시험 코드와 이름(또는 출석번호)만 입력하면 바로 응시. 계정 만들 필요 없습니다.",
   },
   {
     icon: "📊",
@@ -58,7 +69,10 @@ const STEPS = [
   },
 ];
 
-export default function Home() {
+const STEP_PREVIEWS = [GeneratePreview, SharePreview, ReportPreview];
+
+export default async function Home() {
+  const stats = await getPublicStats();
   return (
     <div className="min-h-screen">
 
@@ -113,7 +127,7 @@ export default function Home() {
             href="/demo"
             className="card bg-sun/40 px-8 py-4 text-lg font-bold transition hover:-translate-y-1 active:translate-y-0"
           >
-            ✨ 무료로 체험해보기
+            ✨ AI 샘플 문항 보기
           </Link>
           <Link
             href="/play"
@@ -124,16 +138,16 @@ export default function Home() {
         </div>
 
         <p className="mt-4 text-sm text-ink/40">
-          가입 전 AI 문항 생성 체험 가능 · 학생은 코드+이름만으로 응시
+          가입 전 AI 샘플 문항 미리보기 가능 · 학생은 코드+이름(또는 출석번호)만으로 응시
         </p>
 
         <div className="mt-8 flex justify-center">
           <span className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-mint/30 px-4 py-1.5 text-sm font-bold">
-            🎉 베타 기간 — 무료 제공 중
+            🎉 오픈 베타 — 무료 사용 중
           </span>
         </div>
         <p className="mx-auto mt-2 max-w-md text-xs text-ink/40">
-          정식 서비스 전환 시 사전 안내 후 요금제가 도입될 수 있어요.
+          기본 기능은 정식 전환 후에도 계속 무료입니다.
         </p>
       </section>
 
@@ -146,8 +160,10 @@ export default function Home() {
           <p className="mt-3 text-center text-ink/60">처음 쓰는 선생님도 5분이면 첫 평가를 만들 수 있어요.</p>
 
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <div key={s.step} className="card p-6">
+            {STEPS.map((s, i) => {
+              const Preview = STEP_PREVIEWS[i];
+              return (
+              <div key={s.step} className="card flex flex-col p-6">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand font-display text-lg font-bold text-white shrink-0">
                     {s.step}
@@ -157,8 +173,12 @@ export default function Home() {
                 <h3 className="mt-4 text-xl font-bold">{s.title}</h3>
                 <p className="mt-2 text-ink/70 leading-relaxed">{s.desc}</p>
                 <p className="mt-3 text-xs font-bold text-brand/70 border-t border-ink/10 pt-3">{s.detail}</p>
+                <div className="mt-4 flex-1">
+                  <Preview />
+                </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -184,6 +204,9 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* ── 사회적 증거 ── */}
+      <SocialProof stats={stats} />
 
       {/* ── 하단 CTA ── */}
       <section className="border-t-2 border-ink/10 bg-brand py-16 text-center">
@@ -222,5 +245,47 @@ export default function Home() {
         </p>
       </footer>
     </div>
+  );
+}
+
+function SocialProof({ stats }: { stats: PublicStats | null }) {
+  if (!stats && TESTIMONIALS.length === 0) return null;
+  return (
+    <section className="bg-white/60 py-16">
+      <div className="mx-auto max-w-5xl px-6">
+        <h2 className="font-display text-center text-3xl font-bold sm:text-4xl">
+          선생님들이 이미 쓰고 있어요
+        </h2>
+
+        {stats && (
+          <dl className="mx-auto mt-8 grid max-w-2xl grid-cols-3 gap-3 text-center">
+            {[
+              ["평가를 배포한 선생님", stats.teachers, "명"],
+              ["학생 응시", stats.submissions, "회"],
+              ["만들어진 평가", stats.tests, "개"],
+            ].map(([label, value, unit]) => (
+              <div key={label} className="card px-2 py-4">
+                <dd className="font-display text-3xl font-bold text-brand sm:text-4xl tabular-nums">
+                  {Number(value).toLocaleString("ko-KR")}
+                  <span className="ml-0.5 text-base text-ink/60">{unit}</span>
+                </dd>
+                <dt className="mt-1 text-xs font-bold text-ink/60 sm:text-sm">{label}</dt>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        {TESTIMONIALS.length > 0 && (
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            {TESTIMONIALS.map((t) => (
+              <blockquote key={t.author} className="card p-5">
+                <p className="leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
+                <footer className="mt-3 text-sm font-bold text-ink/50">— {t.author}</footer>
+              </blockquote>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

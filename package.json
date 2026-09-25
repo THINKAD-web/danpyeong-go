@@ -18,6 +18,9 @@
     "verify:demo-rate-limit": "tsx scripts/verify-demo-rate-limit.ts",
     "verify:demo-samples": "tsx scripts/verify-demo-samples.ts",
     "verify:short-code": "tsx scripts/verify-short-code.ts",
+    "verify:student-id": "tsx scripts/verify-student-id.ts",
+    "verify:grading": "tsx scripts/verify-grading.ts",
+    "audit:mixed-number-grading": "tsx scripts/audit-mixed-number-grading.ts",
     "demo:generate-samples": "tsx scripts/generate-demo-samples.ts"
   },
   "prisma": {

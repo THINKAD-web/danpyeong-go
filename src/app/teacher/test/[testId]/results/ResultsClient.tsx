@@ -37,7 +37,7 @@ export function ResultsClient({ stats }: { stats: TestStats }) {
       : [...stats.students];
     rows.sort((a, b) => {
       let diff = 0;
-      if (sortKey === "name") diff = a.studentName.localeCompare(b.studentName, "ko");
+      if (sortKey === "name") diff = a.studentName.localeCompare(b.studentName, "ko", { numeric: true });
       else if (sortKey === "pct") diff = a.pct - b.pct;
       else diff = new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
       return sortAsc ? diff : -diff;
