@@ -7,6 +7,9 @@ import type { GeneratedQuestion } from "@/lib/ai";
 import { validateQuestion } from "@/lib/question-helpers";
 import { QuestionEditor } from "@/components/QuestionEditor";
 import GenerationLoader from "@/components/GenerationLoader";
+import { RemainingBadge } from "@/components/PlanUsage";
+import { UpgradeModal } from "@/components/UpgradeModal";
+import type { PlanStatus } from "@/lib/entitlements";
 
 type Unit = { id: string; term: number; order: number; name: string };
 
@@ -51,6 +54,9 @@ export default function NewTestPage() {
   const [error, setError] = useState<string | null>(null);
   const [errorHint, setErrorHint] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
+  // ── 요금제·월간 한도 ─────────────────────────────────────
+  const [planStatus, setPlanStatus] = useState<PlanStatus | null>(null);
+  const [planLimit, setPlanLimit] = useState<{ used: number; limit: number; resetsAt: string } | null>(null);
 
   // ── 편집·직접 추가 ──────────────────────────────────────
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
@@ -61,6 +67,15 @@ export default function NewTestPage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  function refreshPlanStatus() {
+    fetch("/api/teacher/plan")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: PlanStatus | null) => setPlanStatus(d))
+      .catch(() => {});
+  }
+
+  useEffect(refreshPlanStatus, []);
 
   // 학년 목록 조회
   useEffect(() => {
@@ -110,6 +125,14 @@ export default function NewTestPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        if (res.status === 402 && body.code === "PLAN_LIMIT") {
+          setPlanLimit({ used: body.used, limit: body.limit, resetsAt: body.resetsAt });
+          setRateLimited(true);
+          setError(body.error);
+          setErrorHint(body.hint ?? null);
+          refreshPlanStatus();
+          return;
+        }
         if (res.status === 429 || res.status === 503) {
           setRateLimited(true);
           setError(body.error ?? "AI 생성 한도에 도달했어요.");
@@ -123,6 +146,7 @@ export default function NewTestPage() {
       const data = await res.json();
       setQuestions(data.questions.map((q: GeneratedQuestion) => ({ ...q, source: "AI" as const })));
       setSaveTitle(`${grade}학년 ${term}학기 ${currentUnit.name} 단원평가`);
+      refreshPlanStatus();
     } catch {
       setError("문항 생성에 실패했어요. 다시 시도해 주세요.");
     } finally {
@@ -251,6 +275,11 @@ export default function NewTestPage() {
           </Field>
         </div>
 
+        {planStatus && (
+          <div className="flex justify-end">
+            <RemainingBadge status={planStatus} />
+          </div>
+        )}
         <button
           onClick={handleGenerate}
           disabled={loading || unitsLoading || !!unitsError || !unitId}
@@ -466,6 +495,14 @@ export default function NewTestPage() {
             </div>
           </div>
         </div>
+      )}
+      {planLimit && (
+        <UpgradeModal
+          used={planLimit.used}
+          limit={planLimit.limit}
+          resetsAt={planLimit.resetsAt}
+          onClose={() => setPlanLimit(null)}
+        />
       )}
     </main>
   );

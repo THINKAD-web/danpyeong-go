@@ -8,10 +8,14 @@ import {
   isShortCodeShape,
 } from "../src/lib/short-code";
 import {
-  checkPlayShortCodeRateLimit,
+  checkPlayCodeFailureLimit,
+  checkPlayStartLimit,
   hashIp,
   memoryCount,
-  PLAY_SHORT_CODE_LIMIT_PER_MIN,
+  PLAY_CODE_FAILURE_LIMIT_PER_MIN,
+  PLAY_START_LIMIT_PER_MIN,
+  recordPlayCodeFailure,
+  startBucketKey,
 } from "../src/lib/play-rate-limit";
 
 function assert(condition: boolean, message: string) {
@@ -66,45 +70,61 @@ async function main() {
   );
   assert(code7.length === 7, "falls back to 7 digits after 6-digit collisions");
 
-  // ── rate limit: 5회 허용, 6번째 차단 ─────────────────────
-  const store = new Map<string, number[]>();
+  // ── rate limit (R1): 틀린 코드는 IP당 5회, 맞는 코드 시작은 (시험+IP)당 30회 ──
   const fakeDb = {
     playCodeAttempt: {
       count: async () => 0,
       create: async () => ({ id: "x" }),
     },
   };
+  const T = 1_000_000;
+  const store = new Map<string, number[]>();
+  const deps = (i: number) => ({ prisma: fakeDb as never, memoryStore: store, now: () => T + i });
   const ip = "203.0.113.10";
+
+  for (let i = 0; i < PLAY_CODE_FAILURE_LIMIT_PER_MIN - 1; i++) {
+    await recordPlayCodeFailure(ip, deps(i));
+  }
+  assert((await checkPlayCodeFailureLimit(ip, deps(10))).ok, "4 wrong codes → still allowed");
+  await recordPlayCodeFailure(ip, deps(11));
+  const blocked = await checkPlayCodeFailureLimit(ip, deps(12));
+  assert(!blocked.ok && blocked.status === 429, "5 wrong codes (any codes) → IP blocked");
+  assert(
+    (await checkPlayCodeFailureLimit(ip, { ...deps(0), now: () => T + 61_000 })).ok,
+    "failure window expires after 60s"
+  );
+
+  // 한 교실 30명이 같은 IP 로 같은 시험 입장 — 틀린 코드 실패와 무관하게 통과
+  const classroomIp = "198.51.100.20";
   let allowed = 0;
   let denied = 0;
-  for (let i = 0; i < PLAY_SHORT_CODE_LIMIT_PER_MIN + 2; i++) {
-    const r = await checkPlayShortCodeRateLimit(ip, {
-      prisma: fakeDb as never,
-      memoryStore: store,
-      now: () => 1_000_000 + i, // same window
-    });
+  for (let i = 0; i < PLAY_START_LIMIT_PER_MIN + 2; i++) {
+    const r = await checkPlayStartLimit(classroomIp, "test_A", deps(i));
     if (r.ok) allowed += 1;
     else denied += 1;
   }
-  assert(allowed === PLAY_SHORT_CODE_LIMIT_PER_MIN, `allows exactly ${PLAY_SHORT_CODE_LIMIT_PER_MIN}`);
-  assert(denied === 2, "denies after limit");
-  assert(memoryCount(hashIp(ip), 1_000_000 + 10, store) === PLAY_SHORT_CODE_LIMIT_PER_MIN, "memory bucket size");
+  assert(allowed === PLAY_START_LIMIT_PER_MIN, `same test+IP allows exactly ${PLAY_START_LIMIT_PER_MIN}`);
+  assert(denied === 2, "denies after start limit");
+  assert((await checkPlayStartLimit(classroomIp, "test_B", deps(50))).ok, "different test has its own bucket");
+  assert((await checkPlayCodeFailureLimit(classroomIp, deps(51))).ok, "successful starts don't consume failure budget");
+  assert(
+    memoryCount(startBucketKey(classroomIp, "test_A"), T + 60, store) === PLAY_START_LIMIT_PER_MIN,
+    "start bucket keyed by IP+test"
+  );
+  assert(memoryCount(hashIp(classroomIp), T + 60, store) === 0, "failure bucket untouched by starts");
 
-  // DB가 이미 limit이면 in-memory 여유와 무관하게 차단
-  const store2 = new Map<string, number[]>();
-  const rDb = await checkPlayShortCodeRateLimit("198.51.100.1", {
+  // DB 가 이미 한도면 in-memory 여유와 무관하게 차단 (다중 인스턴스)
+  const rDb = await checkPlayCodeFailureLimit("198.51.100.1", {
     prisma: {
       playCodeAttempt: {
-        count: async () => PLAY_SHORT_CODE_LIMIT_PER_MIN,
-        create: async () => {
-          throw new Error("should not create");
-        },
+        count: async () => PLAY_CODE_FAILURE_LIMIT_PER_MIN,
+        create: async () => ({ id: "x" }),
       },
     } as never,
-    memoryStore: store2,
+    memoryStore: new Map(),
     now: () => 2_000_000,
   });
-  assert(rDb.ok === false && rDb.status === 429, "DB count at limit → 429");
+  assert(rDb.ok === false && rDb.status === 429, "DB failure count at limit → 429");
 
   // cuid 경로는 isShortCodeShape로 제외됨 — 호출부 계약만 문서화
   assert(isShortCodeShape("cl9abc") === false, "shareToken path skips short-code RL");

@@ -21,6 +21,7 @@
     "verify:student-id": "tsx scripts/verify-student-id.ts",
     "verify:grading": "tsx scripts/verify-grading.ts",
     "audit:mixed-number-grading": "tsx scripts/audit-mixed-number-grading.ts",
+    "verify:plans": "tsx scripts/verify-plans.ts",
     "demo:generate-samples": "tsx scripts/generate-demo-samples.ts"
   },
   "prisma": {

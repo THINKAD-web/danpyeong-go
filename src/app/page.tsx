@@ -83,6 +83,12 @@ export default async function Home() {
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href="/pricing"
+            className="text-sm font-bold text-ink/60 hover:text-ink transition"
+          >
+            요금제
+          </Link>
+          <Link
             href="/play"
             className="text-sm font-bold text-ink/60 hover:text-ink transition"
           >
@@ -239,6 +245,10 @@ export default async function Home() {
         </p>
         <p className="mt-1">초등 교사를 위한 AI 단원평가 도구</p>
         <p className="mt-3">
+          <Link href="/pricing" className="font-bold text-ink/60 hover:text-brand">
+            요금제
+          </Link>
+          {" · "}
           <Link href="/privacy" className="font-bold text-ink/60 hover:text-brand">
             개인정보처리방침
           </Link>

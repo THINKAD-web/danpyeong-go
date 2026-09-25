@@ -9,6 +9,7 @@
 
 import { prisma } from "./prisma";
 import { maybeNotifyAiGlobalThreshold } from "./ai-usage-alert";
+import { kstDayStart, kstMonthStart } from "./kst";
 
 // ── 설정값 ───────────────────────────────────────────────
 function getLimit(envKey: string, defaultVal: number): number {
@@ -42,22 +43,23 @@ export function clearInProgress(userId: string): void {
   inProgress.delete(userId);
 }
 
-// ── 일일 사용량 조회 ──────────────────────────────────────
-function todayStart(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
+// ── 사용량 조회 (경계는 KST — 서버 로컬(UTC) 기준이면 KST 오전 9시에 초기화됨) ──
 export async function getUserDailyCount(userId: string): Promise<number> {
   return prisma.aiUsageLog.count({
-    where: { userId, createdAt: { gte: todayStart() } },
+    where: { userId, createdAt: { gte: kstDayStart() } },
   });
 }
 
 export async function getGlobalDailyCount(): Promise<number> {
   return prisma.aiUsageLog.count({
-    where: { createdAt: { gte: todayStart() } },
+    where: { createdAt: { gte: kstDayStart() } },
+  });
+}
+
+/** 이번 달(KST) 성공한 AI 생성 횟수 — 월간 요금제 한도의 기준 */
+export async function getUserMonthlyCount(userId: string): Promise<number> {
+  return prisma.aiUsageLog.count({
+    where: { userId, createdAt: { gte: kstMonthStart() } },
   });
 }
 
