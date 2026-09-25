@@ -4,6 +4,8 @@
  */
 import {
   effectivePlan,
+  enforcementStart,
+  isEnforced,
   evaluateGenerationQuota,
   FREE_MONTHLY_GENERATIONS,
   hasProFeature,
@@ -46,9 +48,22 @@ const at = (used: number) => evaluateGenerationQuota({ plan: "FREE", used, enfor
 assert(at(7).ok, "Free 8번째 생성 허용 (used=7)");
 const over = at(8);
 assert(!over.ok && over.limit === 8 && over.used === 8, "Free 9번째 생성 차단 (used=8)");
-assert(evaluateGenerationQuota({ plan: "FREE", used: 100, enforced: false }).ok, "BILLING_ENFORCED off → never blocks");
+assert(evaluateGenerationQuota({ plan: "FREE", used: 100, enforced: false }).ok, "not enforced → never blocks");
 assert(evaluateGenerationQuota({ plan: "PRO", used: 1000, enforced: true }).ok, "PRO unlimited");
 assert(evaluateGenerationQuota({ plan: "SCHOOL", used: 1000, enforced: true }).ok, "SCHOOL unlimited");
+
+// ── 게이팅 시작일 + 월 중간 유예 ──────────────────────────
+assert(enforcementStart(undefined) === null && enforcementStart("") === null, "unset → no gating");
+assert(enforcementStart("2027/02/01") === null && enforcementStart("soon") === null, "bad format → no gating");
+assert(enforcementStart("2027-02-30") === null && enforcementStart("2027-13-01") === null, "impossible date → no gating");
+const feb1 = enforcementStart("2027-02-01");
+assert(feb1 !== null && iso(feb1) === "2027-01-31T15:00:00.000Z", "1st of month → starts that day 00:00 KST");
+const midFeb = enforcementStart("2027-02-15");
+assert(midFeb !== null && iso(midFeb) === "2027-02-28T15:00:00.000Z", "mid-month → deferred to Mar 1 00:00 KST");
+assert(!isEnforced(midFeb, new Date("2027-02-20T00:00:00Z")), "grace: rest of February not enforced");
+assert(isEnforced(midFeb, new Date("2027-02-28T15:00:00Z")), "enforced from Mar 1 00:00 KST");
+assert(!isEnforced(feb1, new Date("2027-01-31T14:59:59Z")), "not enforced 1s before start");
+assert(!isEnforced(null), "null start → never enforced");
 
 // ── 프로 기능 게이트 ──────────────────────────────────────
 assert(hasProFeature("FREE", false), "beta: Pro features open to everyone");

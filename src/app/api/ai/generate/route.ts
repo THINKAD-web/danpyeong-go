@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     });
     authorId = author.id;
 
-    // ── 요금제 월간 한도 (BILLING_ENFORCED 일 때만 차단) ─────────
+    // ── 요금제 월간 한도 (BILLING_ENFORCED_FROM 이후에만 차단) ─────────
     const quota = await checkGenerationQuota(authorId);
     if (!quota.ok) {
       const { ok: _ok, status, ...body } = quota;

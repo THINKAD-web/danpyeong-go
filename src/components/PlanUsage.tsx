@@ -13,7 +13,11 @@ export function PlanUsageLine({ status }: { status: PlanStatus }) {
         ? `이번 달 AI 생성 ${status.monthlyUsed}회 · 무제한`
         : `이번 달 ${status.monthlyUsed}/${status.monthlyLimit}회 사용`}
       {!status.enforced && !unlimited && (
-        <span className="text-ink/40"> · 오픈 베타 동안은 한도 없이 사용 중</span>
+        <span className="text-ink/40">
+          {status.enforcementStartsAt
+            ? ` · ${formatKstMonthDay(new Date(status.enforcementStartsAt))}부터 월 ${status.monthlyLimit}회 적용`
+            : " · 오픈 베타 동안은 한도 없이 사용 중"}
+        </span>
       )}
       {" · "}
       <Link href="/teacher/billing" className="font-bold text-brand hover:underline">

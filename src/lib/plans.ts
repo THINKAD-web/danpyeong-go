@@ -3,6 +3,8 @@
 //  평가 저장·배포·채점·기본 리포트·기본 내보내기는 모든 요금제에서 제한 없음)
 // 클라이언트에서도 import 하므로 서버 전용 모듈을 가져오지 않는다.
 
+import { kstMonthStart, kstNextMonthStart } from "./kst";
+
 export type PlanId = "FREE" | "PRO" | "SCHOOL";
 
 export const FREE_MONTHLY_GENERATIONS = 8;
@@ -52,12 +54,34 @@ export function effectivePlan(
   return plan;
 }
 
+/**
+ * 유료 게이팅 시작 시각. BILLING_ENFORCED_FROM(예: "2027-02-01") 을 받아
+ * KST 월 1일 00:00 으로 올림한다 — 월 중간에 켜도 그 달은 제한하지 않고 다음 달 1일부터 적용
+ * (이미 한도를 넘긴 교사가 갑자기 막히지 않도록). 미설정·형식 오류 = null(게이팅 안 함).
+ */
+export function enforcementStart(from: string | undefined | null): Date | null {
+  if (!from) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(from.trim());
+  if (!m) return null;
+  const at = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00+09:00`); // KST 자정
+  if (Number.isNaN(at.getTime())) return null;
+  // 2027-02-30 같은 없는 날짜는 다음 달로 넘어가므로 거부
+  const kst = new Date(at.getTime() + 9 * 60 * 60 * 1000);
+  if (kst.getUTCMonth() + 1 !== Number(m[2]) || kst.getUTCDate() !== Number(m[3])) return null;
+  const monthStart = kstMonthStart(at);
+  return monthStart.getTime() === at.getTime() ? at : kstNextMonthStart(at);
+}
+
+export function isEnforced(start: Date | null, now: Date = new Date()): boolean {
+  return start !== null && now.getTime() >= start.getTime();
+}
+
 export type QuotaDecision =
   | { ok: true }
   | { ok: false; used: number; limit: number };
 
 /**
- * 월간 생성 한도 판정. enforced=false(베타, BILLING_ENFORCED 미설정)면 항상 통과.
+ * 월간 생성 한도 판정. enforced=false(베타, 게이팅 시작 전)면 항상 통과.
  */
 export function evaluateGenerationQuota(params: {
   plan: PlanId;
