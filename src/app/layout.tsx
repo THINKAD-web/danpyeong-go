@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Gaegu, Noto_Sans_KR } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { PwaRegister } from "@/components/PwaRegister";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const gaegu = Gaegu({
@@ -19,6 +20,7 @@ const notoSansKR = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "단평GO — 초등 단원평가, AI로 5분 컷!",
   description:
     "초등 교사가 2022 개정 교육과정에 맞춰 단원평가를 AI로 빠르게 만들고 배포·채점·분석하는 경량 SaaS",

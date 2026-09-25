@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isShortCodeShape } from "@/lib/short-code";
+import { normalizeStudentId } from "@/lib/student-id";
 import {
   checkPlayShortCodeRateLimit,
   clientIpFromHeaders,
@@ -22,7 +23,7 @@ function invalidCodeResponse(logMsg: string) {
 }
 
 // POST /api/play/start
-// 학생이 shareToken 또는 shortCode + 이름으로 응시 시작 → Attempt(IN_PROGRESS) 생성
+// 학생이 shareToken 또는 shortCode + 이름(또는 출석번호)으로 응시 시작 → Attempt(IN_PROGRESS) 생성
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -32,7 +33,6 @@ export async function POST(req: NextRequest) {
     }
 
     const code = parsed.data.shareToken.trim();
-    const { studentName } = parsed.data;
 
     // 6자리 단축 코드는 키스페이스가 작아 IP당 rate limit 적용
     if (isShortCodeShape(code)) {
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       status: true,
       timeLimitMin: true,
       shuffle: true,
+      studentIdMode: true,
       _count: { select: { questions: true } },
     } as const;
 
@@ -76,6 +77,12 @@ export async function POST(req: NextRequest) {
     if (test.status === "DRAFT") {
       return invalidCodeResponse(`미배포 평가: ${test.id}`);
     }
+
+    const id = normalizeStudentId(test.studentIdMode, parsed.data.studentName);
+    if (!id.ok) {
+      return NextResponse.json({ error: id.error, code: id.code }, { status: 400 });
+    }
+    const studentName = id.studentName;
 
     const attempt = await prisma.attempt.create({
       data: { testId: test.id, studentName, status: "IN_PROGRESS" },

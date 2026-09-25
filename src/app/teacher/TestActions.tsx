@@ -13,6 +13,7 @@ export function TestActions({
   status,
   shareToken,
   shortCode,
+  studentIdMode,
   title,
   attemptCount,
 }: {
@@ -20,6 +21,7 @@ export function TestActions({
   status: Status;
   shareToken: string;
   shortCode: string | null;
+  studentIdMode: "NAME" | "NUMBER";
   title: string;
   attemptCount: number;
 }) {
@@ -39,6 +41,24 @@ export function TestActions({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),
       });
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function changeStudentIdMode(next: "NAME" | "NUMBER") {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/tests/${testId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentIdMode: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error ?? "변경 중 오류가 발생했어요.");
+      }
       router.refresh();
     } finally {
       setLoading(false);
@@ -123,6 +143,22 @@ export function TestActions({
           {deleting ? "삭제 중…" : "삭제"}
         </button>
       </div>
+      {/* 개인정보 최소화: 응시 기록이 생기기 전까지만 이름/출석번호 방식 변경 가능 */}
+      {status !== "CLOSED" && (
+        <label className="flex items-center gap-1.5 text-xs text-ink/50">
+          학생 입력
+          <select
+            value={studentIdMode}
+            onChange={(e) => changeStudentIdMode(e.target.value as "NAME" | "NUMBER")}
+            disabled={loading || attemptCount > 0}
+            title={attemptCount > 0 ? "응시 기록이 있어 바꿀 수 없어요" : undefined}
+            className="rounded-md border border-ink/30 bg-white px-1.5 py-0.5 font-bold text-ink/70 disabled:opacity-60"
+          >
+            <option value="NAME">이름</option>
+            <option value="NUMBER">출석번호만</option>
+          </select>
+        </label>
+      )}
       {/* 배포 중: 6자리 단축 코드 상시 노출 + 코드/링크 단독 복사 */}
       {status === "PUBLISHED" && (
         <div className="flex flex-wrap items-center justify-end gap-2">

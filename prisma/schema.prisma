@@ -146,6 +146,12 @@ enum TestStatus {
   CLOSED // 마감
 }
 
+// 학생 응시 시 식별 방식 — 개인정보 최소화 모드(NUMBER)는 이름 대신 출석번호만 받는다
+enum StudentIdMode {
+  NAME // 이름(또는 닉네임) 입력 — 기본값
+  NUMBER // 출석번호만 입력 → studentName 에 "12번" 형태로 저장
+}
+
 model Test {
   id          String     @id @default(cuid())
   ownerId     String
@@ -160,6 +166,7 @@ model Test {
   shareToken   String     @unique @default(cuid()) // 링크 공유용 토큰
   // 구두 전달·직접 타이핑용 단축 코드 (배포 시 발급). null = 미배포/미발급
   shortCode    String?    @unique
+  studentIdMode StudentIdMode @default(NAME)
 
   publishedAt DateTime?
   closedAt    DateTime?
@@ -224,7 +231,7 @@ model Attempt {
   classroomId String?
   classroom   Classroom? @relation(fields: [classroomId], references: [id])
 
-  studentName String // 학생이 입력한 이름
+  studentName String // 학생이 입력한 이름 (NUMBER 모드: "12번")
   status      AttemptStatus @default(IN_PROGRESS)
   score       Int? // 자동 채점 총점
   maxScore    Int? // 만점

@@ -32,6 +32,7 @@ async function getTeacherData() {
       status: true,
       shareToken: true,
       shortCode: true,
+      studentIdMode: true,
       _count: { select: { questions: true, attempts: true } },
       attempts: {
         where: { status: "SUBMITTED" },
@@ -76,6 +77,7 @@ async function getTeacherData() {
         status: t.status as "DRAFT" | "PUBLISHED" | "CLOSED",
         shareToken: t.shareToken,
         shortCode: t.shortCode,
+        studentIdMode: t.studentIdMode,
         questionCount: t._count.questions,
         attemptCount,
         totalAttemptCount: t._count.attempts,
@@ -190,6 +192,7 @@ export default async function TeacherDashboard() {
                     status={t.status}
                     shareToken={t.shareToken}
                     shortCode={t.shortCode}
+                    studentIdMode={t.studentIdMode}
                     title={t.title}
                     attemptCount={t.totalAttemptCount}
                   />
