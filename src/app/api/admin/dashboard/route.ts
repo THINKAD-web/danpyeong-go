@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { currentAdmin } from "@/lib/auth";
+import { kstDayStart } from "@/lib/kst";
 
 export async function GET() {
   try {
@@ -10,7 +11,7 @@ export async function GET() {
   }
 
   const now = new Date();
-  const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+  const todayStart = kstDayStart(now); // KST 00:00 (서버는 UTC)
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7); weekStart.setHours(0, 0, 0, 0);
 
   const [

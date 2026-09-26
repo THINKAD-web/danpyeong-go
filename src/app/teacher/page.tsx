@@ -6,6 +6,8 @@ import { TestActions } from "./TestActions";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { NextStepBanner } from "@/components/NextStepBanner";
 import { allocateUniqueShortCode } from "@/lib/short-code";
+import { PlanUsageLine } from "@/components/PlanUsage";
+import { getPlanStatus } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,7 @@ async function getTeacherData() {
   const author = await prisma.user.findUnique({
     where: { clerkId: teacher.id },
   });
-  if (!author) return { tests: [], teacher };
+  if (!author) return { tests: [], teacher, planStatus: await getPlanStatus(null) };
 
   const tests = await prisma.test.findMany({
     where: { ownerId: author.id },
@@ -57,8 +59,11 @@ async function getTeacherData() {
     }
   }
 
+  const planStatus = await getPlanStatus(author.id);
+
   return {
     teacher,
+    planStatus,
     tests: tests.map((t) => {
       const submitted = t.attempts;
       const attemptCount = submitted.length;
@@ -88,7 +93,7 @@ async function getTeacherData() {
 }
 
 export default async function TeacherDashboard() {
-  const { teacher, tests } = await getTeacherData();
+  const { teacher, tests, planStatus } = await getTeacherData();
 
   const published = tests.filter((t) => t.status === "PUBLISHED").length;
   const totalAttempts = tests.reduce((s, t) => s + t.attemptCount, 0);
@@ -120,7 +125,12 @@ export default async function TeacherDashboard() {
       </nav>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">내 단원평가</h1>
+        <div>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">내 단원평가</h1>
+          <div className="mt-1">
+            <PlanUsageLine status={planStatus} />
+          </div>
+        </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/teacher/admin/units"

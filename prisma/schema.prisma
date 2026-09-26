@@ -26,12 +26,23 @@ enum Role {
   ADMIN
 }
 
+// 요금제 — 표·한도는 src/lib/plans.ts 가 단일 원천
+enum Plan {
+  FREE
+  PRO
+  SCHOOL
+}
+
 model User {
   id        String   @id @default(cuid())
   clerkId   String   @unique // Clerk 의 user id
   email     String?  @unique
   name      String?
   role      Role     @default(TEACHER)
+  // 요금제. planExpiresAt 이 지나면 FREE 로 간주 (effectivePlan). null = 만료 없음
+  plan          Plan      @default(FREE)
+  planStartedAt DateTime?
+  planExpiresAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

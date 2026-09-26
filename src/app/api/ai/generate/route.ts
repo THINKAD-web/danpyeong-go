@@ -12,6 +12,7 @@ import {
   clearInProgress,
   logAiUsage,
 } from "@/lib/ai-rate-limit";
+import { checkGenerationQuota } from "@/lib/entitlements";
 
 // POST /api/ai/generate
 export async function POST(req: NextRequest) {
@@ -40,6 +41,13 @@ export async function POST(req: NextRequest) {
       },
     });
     authorId = author.id;
+
+    // ── 요금제 월간 한도 (BILLING_ENFORCED_FROM 이후에만 차단) ─────────
+    const quota = await checkGenerationQuota(authorId);
+    if (!quota.ok) {
+      const { ok: _ok, status, ...body } = quota;
+      return NextResponse.json(body, { status });
+    }
 
     // ── Rate limit 확인 ──────────────────────────────────────
     const limitCheck = await checkRateLimit(authorId);
