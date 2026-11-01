@@ -25,6 +25,9 @@ const EMPTY_QUESTION: GeneratedQuestion = {
   source: "MANUAL",
 };
 
+/** 베타 시안: AI 생성 버튼은 UI에서만 숨김 (핸들러·API 호출 코드는 유지) */
+const SHOW_AI_GENERATE = false;
+
 export default function NewTestPage() {
   const router = useRouter();
 
@@ -167,175 +170,73 @@ export default function NewTestPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-12">
-      <nav className="mb-8 flex items-center justify-between">
+    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <nav className="mb-6 flex items-center justify-between">
         <Link href="/teacher" className="text-sm font-bold text-brand">← 대시보드</Link>
+        <Link href="/design/teacher" className="text-xs font-bold text-ink/40 hover:text-brand">
+          시안 미리보기
+        </Link>
       </nav>
 
-      <h1 className="font-display text-3xl font-bold sm:text-4xl">AI로 문항 만들기</h1>
-      <p className="mt-2 text-sm text-ink/60">
-        단원과 조건을 고르면 AI가 초안을 만들어요. 생성 후 자유롭게 수정·삭제하세요.
+      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">시험지 만들기</h1>
+      <p className="mt-2 text-base text-ink/60">
+        단원·난이도를 고른 뒤 문항을 담아 시험지를 완성하세요. 미리보기는 화면 중앙에서 확인합니다.
       </p>
 
-      {/* 생성 조건 */}
-      <div className="card mt-6 space-y-4 p-5 sm:p-6">
-        {/* 학년·학기·단원 */}
-        <div className="flex flex-wrap gap-3">
-          <Field label="학년">
-            {gradesLoading ? (
-              <div className="select flex items-center text-ink/40">불러오는 중…</div>
-            ) : (
-              <select value={grade} onChange={(e) => setGrade(Number(e.target.value))} className="select">
-                {grades.map((g) => (
-                  <option key={g} value={g}>{g}학년</option>
-                ))}
-              </select>
-            )}
-          </Field>
-          <Field label="학기">
-            <select value={term} onChange={(e) => setTerm(Number(e.target.value))} className="select">
-              <option value={1}>1학기</option>
-              <option value={2}>2학기</option>
-            </select>
-          </Field>
-          <Field label="단원">
-            {unitsLoading ? (
-              <div className="select flex items-center text-ink/40">불러오는 중…</div>
-            ) : unitsError ? (
-              <div className="select flex items-center text-sm text-coral">{unitsError}</div>
-            ) : (
-              <select value={unitId} onChange={(e) => setUnitId(e.target.value)} className="select">
-                {units.map((u) => (
-                  <option key={u.id} value={u.id}>{u.order}. {u.name}</option>
-                ))}
-              </select>
-            )}
-          </Field>
-        </div>
-
-        {/* 생성 옵션 */}
-        <div className="flex flex-wrap gap-3">
-          <Field label="문항 수">
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={countStr}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/[^0-9]/g, "");
-                const stripped = raw.replace(/^0+/, "") || "";
-                setCountStr(stripped);
-                const n = parseInt(stripped);
-                if (!isNaN(n) && n >= 1 && n <= 20) setCount(n);
-              }}
-              onBlur={() => {
-                const n = Math.min(20, Math.max(1, parseInt(countStr) || 1));
-                setCount(n);
-                setCountStr(String(n));
-              }}
-              className="select"
-            />
-          </Field>
-          <Field label="난이도">
-            <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as typeof difficulty)} className="select">
-              <option value="EASY">하</option>
-              <option value="MEDIUM">중</option>
-              <option value="HARD">상</option>
-            </select>
-          </Field>
-          <Field label="유형">
-            <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className="select">
-              <option value="MULTIPLE_CHOICE">객관식</option>
-              <option value="SHORT_ANSWER">단답형</option>
-            </select>
-          </Field>
-        </div>
-
-        <button
-          onClick={handleGenerate}
-          disabled={loading || unitsLoading || !!unitsError || !unitId}
-          className="card w-full bg-brand py-3 font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-50"
-        >
-          {loading ? "AI가 만드는 중…" : "✨ AI로 문항 생성"}
-        </button>
-
-        {loading && <GenerationLoader count={count} />}
-
-        {/* 에러 (rate limit 또는 일반) */}
-        {error && !loading && (
-          <div className="rounded-xl border-2 border-coral/30 bg-coral/5 px-4 py-3">
-            <div className="flex items-start gap-3">
-              <p className="flex-1 text-sm font-bold text-coral">{error}</p>
-              {!rateLimited && (
-                <button
-                  onClick={handleGenerate}
-                  disabled={!currentUnit}
-                  className="shrink-0 rounded-lg border-2 border-coral px-3 py-1.5 text-xs font-bold text-coral hover:bg-coral hover:text-white transition"
-                >
-                  재시도
-                </button>
-              )}
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* 시험지 미리보기 (중심) */}
+        <section className="order-1">
+          <div className="card overflow-hidden">
+            <div className="flex items-center justify-between border-b border-ink/8 bg-brand/[0.03] px-5 py-3">
+              <div>
+                <p className="text-xs font-bold text-brand">시험지 미리보기</p>
+                <h2 className="text-lg font-bold">
+                  {saveTitle || `${grade}학년 ${term}학기 ${currentUnit?.name ?? ""} 단원평가`}
+                </h2>
+              </div>
+              <span className="rounded-full bg-brand/10 px-3 py-1 text-sm font-bold text-brand tabular-nums">
+                {questions.length}문항
+              </span>
             </div>
-            {errorHint && (
-              <p className="mt-1.5 text-xs text-ink/50">{errorHint}</p>
-            )}
-          </div>
-        )}
-      </div>
 
-      {/* 생성 결과 */}
-      {(questions.length > 0 || addingManual) && (
-        <div className="mt-8">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-display text-2xl font-bold">
-              문항 {questions.length}개
-            </h2>
-            <button
-              onClick={() => setShowSaveModal(true)}
-              disabled={questions.length === 0}
-              className="card bg-mint/30 px-4 py-2 text-sm font-bold text-ink transition hover:-translate-y-0.5 disabled:opacity-40"
-            >
-              테스트로 저장
-            </button>
-          </div>
-          {questions.some((q) => q.source === "AI") && (
-            <p className="mt-1 text-sm text-ink/50">
-              ⚠️ AI 생성 문항입니다. 교육과정 적합성과 정답을 반드시 확인하세요.
-            </p>
-          )}
+            <div className="space-y-4 p-5">
+              {questions.length === 0 && !addingManual && (
+                <div className="rounded-xl border border-dashed border-ink/15 px-4 py-14 text-center">
+                  <p className="text-base font-bold text-ink/50">아직 담긴 문항이 없습니다</p>
+                  <p className="mt-1 text-sm text-ink/40">옆 패널에서 조건을 고르거나 직접 문항을 추가하세요</p>
+                </div>
+              )}
 
-          <div className="mt-4 space-y-4">
-            {questions.map((q, i) => (
-              <div key={i} className="card p-4 sm:p-5">
-                {editingIdx === i ? (
-                  <QuestionEditor
-                    initial={q}
-                    onSave={(updated) => saveEdit(i, updated)}
-                    onCancel={() => setEditingIdx(null)}
-                  />
-                ) : (
-                  <div>
+              {questions.map((q, i) => (
+                <div key={i} className="border-b border-ink/6 pb-4 last:border-0 last:pb-0">
+                  {editingIdx === i ? (
+                    <QuestionEditor
+                      initial={q}
+                      onSave={(updated) => saveEdit(i, updated)}
+                      onCancel={() => setEditingIdx(null)}
+                    />
+                  ) : (
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <div className="mb-2 flex flex-wrap gap-1.5 text-xs font-bold">
-                          <span className="rounded-full bg-ink/10 px-2 py-0.5">
+                          <span className="rounded-md bg-ink/8 px-2 py-0.5">
                             {q.type === "MULTIPLE_CHOICE" ? "객관식" : "단답형"}
                           </span>
-                          <span className="rounded-full bg-sun/30 px-2 py-0.5">
+                          <span className="rounded-md bg-brand/8 px-2 py-0.5 text-brand">
                             난이도 {q.difficulty === "EASY" ? "하" : q.difficulty === "MEDIUM" ? "중" : "상"}
                           </span>
                           {q.source === "MANUAL" && (
-                            <span className="rounded-full bg-coral/20 px-2 py-0.5 text-coral">직접 작성</span>
+                            <span className="rounded-md bg-amber-50 px-2 py-0.5 text-amber-700">직접 작성</span>
                           )}
                         </div>
-                        <p className="font-bold text-sm sm:text-base">{i + 1}. {q.stem}</p>
+                        <p className="text-base font-bold">{i + 1}. {q.stem}</p>
                         {q.type === "MULTIPLE_CHOICE" ? (
                           <ul className="mt-2 space-y-1">
                             {q.choices.map((c) => (
                               <li
                                 key={c.order}
                                 className={`rounded-lg px-3 py-1.5 text-sm ${
-                                  c.isCorrect ? "bg-mint/20 font-bold text-green-800" : "bg-ink/5"
+                                  c.isCorrect ? "bg-green-50 font-bold text-green-800" : "bg-ink/5"
                                 }`}
                               >
                                 {["①", "②", "③", "④"][c.order - 1]} {c.text}
@@ -351,89 +252,186 @@ export default function NewTestPage() {
                         )}
                         {q.explanation && (
                           <p className="mt-2 rounded-lg bg-brand/5 px-3 py-2 text-sm text-ink/70">
-                            💡 {q.explanation}
+                            {q.explanation}
                           </p>
                         )}
                       </div>
                       <div className="flex shrink-0 flex-col gap-1.5">
                         <button
                           onClick={() => { setEditingIdx(i); setAddingManual(false); }}
-                          className="rounded-lg border-2 border-brand px-2 py-1 text-xs font-bold text-brand transition hover:bg-brand hover:text-white"
+                          className="rounded-lg border border-brand px-2 py-1 text-xs font-bold text-brand transition hover:bg-brand hover:text-white"
                         >
                           수정
                         </button>
                         <button
                           onClick={() => removeQuestion(i)}
-                          className="rounded-lg border-2 border-coral px-2 py-1 text-xs font-bold text-coral transition hover:bg-coral hover:text-white"
+                          className="rounded-lg border border-rose-400 px-2 py-1 text-xs font-bold text-rose-500 transition hover:bg-rose-500 hover:text-white"
                         >
                           삭제
                         </button>
                       </div>
                     </div>
+                  )}
+                </div>
+              ))}
+
+              {addingManual && (
+                <div className="rounded-xl border border-dashed border-brand/40 p-4">
+                  <p className="mb-3 text-sm font-bold text-brand">직접 문항 작성</p>
+                  <QuestionEditor
+                    initial={EMPTY_QUESTION}
+                    isNew
+                    onSave={addManualQuestion}
+                    onCancel={() => setAddingManual(false)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {questions.length > 0 && (
+            <button
+              onClick={() => setShowSaveModal(true)}
+              className="btn-primary mt-4 w-full"
+            >
+              테스트로 저장
+            </button>
+          )}
+        </section>
+
+        {/* 문항 선택/조건 패널 (옆) */}
+        <aside className="order-2">
+          <div className="card sticky top-4 space-y-4 p-5">
+            <h3 className="font-bold">단원 · 난이도 필터</h3>
+
+            <div className="space-y-3">
+              <Field label="학년">
+                {gradesLoading ? (
+                  <div className="select flex items-center text-ink/40">불러오는 중…</div>
+                ) : (
+                  <select value={grade} onChange={(e) => setGrade(Number(e.target.value))} className="select">
+                    {grades.map((g) => (
+                      <option key={g} value={g}>{g}학년</option>
+                    ))}
+                  </select>
+                )}
+              </Field>
+              <Field label="학기">
+                <select value={term} onChange={(e) => setTerm(Number(e.target.value))} className="select">
+                  <option value={1}>1학기</option>
+                  <option value={2}>2학기</option>
+                </select>
+              </Field>
+              <Field label="단원">
+                {unitsLoading ? (
+                  <div className="select flex items-center text-ink/40">불러오는 중…</div>
+                ) : unitsError ? (
+                  <div className="select flex items-center text-sm text-rose-500">{unitsError}</div>
+                ) : (
+                  <select value={unitId} onChange={(e) => setUnitId(e.target.value)} className="select">
+                    {units.map((u) => (
+                      <option key={u.id} value={u.id}>{u.order}. {u.name}</option>
+                    ))}
+                  </select>
+                )}
+              </Field>
+              <Field label="난이도">
+                <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as typeof difficulty)} className="select">
+                  <option value="EASY">하</option>
+                  <option value="MEDIUM">중</option>
+                  <option value="HARD">상</option>
+                </select>
+              </Field>
+              {SHOW_AI_GENERATE && (
+                <>
+                  <Field label="문항 수">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={countStr}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9]/g, "");
+                        const stripped = raw.replace(/^0+/, "") || "";
+                        setCountStr(stripped);
+                        const n = parseInt(stripped);
+                        if (!isNaN(n) && n >= 1 && n <= 20) setCount(n);
+                      }}
+                      onBlur={() => {
+                        const n = Math.min(20, Math.max(1, parseInt(countStr) || 1));
+                        setCount(n);
+                        setCountStr(String(n));
+                      }}
+                      className="select"
+                    />
+                  </Field>
+                  <Field label="유형">
+                    <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className="select">
+                      <option value="MULTIPLE_CHOICE">객관식</option>
+                      <option value="SHORT_ANSWER">단답형</option>
+                    </select>
+                  </Field>
+                </>
+              )}
+            </div>
+
+            {/* AI 생성 버튼 — SHOW_AI_GENERATE가 true일 때만 표시 (핸들러는 유지) */}
+            {SHOW_AI_GENERATE && (
+              <>
+                <button
+                  onClick={handleGenerate}
+                  disabled={loading || unitsLoading || !!unitsError || !unitId}
+                  className="btn-primary w-full disabled:opacity-50"
+                >
+                  {loading ? "AI가 만드는 중…" : "AI로 문항 생성"}
+                </button>
+                {loading && <GenerationLoader count={count} />}
+                {error && !loading && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <p className="flex-1 text-sm font-bold text-rose-600">{error}</p>
+                      {!rateLimited && (
+                        <button
+                          onClick={handleGenerate}
+                          disabled={!currentUnit}
+                          className="shrink-0 rounded-lg border border-rose-400 px-3 py-1.5 text-xs font-bold text-rose-600"
+                        >
+                          재시도
+                        </button>
+                      )}
+                    </div>
+                    {errorHint && <p className="mt-1.5 text-xs text-ink/50">{errorHint}</p>}
                   </div>
                 )}
-              </div>
-            ))}
+              </>
+            )}
 
-            {/* 직접 추가 폼 */}
-            {addingManual && (
-              <div className="card border-2 border-dashed border-brand/40 p-4 sm:p-5">
-                <p className="mb-3 text-sm font-bold text-brand">✏️ 직접 문항 작성</p>
-                <QuestionEditor
-                  initial={EMPTY_QUESTION}
-                  isNew
-                  onSave={addManualQuestion}
-                  onCancel={() => setAddingManual(false)}
-                />
-              </div>
+            {!SHOW_AI_GENERATE && (
+              <p className="rounded-xl bg-brand/5 px-3 py-3 text-sm leading-relaxed text-ink/65">
+                검수된 문제은행에서 고르는 흐름으로 전환 중입니다. 지금은{" "}
+                <strong>직접 문항 추가</strong>로 시험지를 구성할 수 있습니다.
+                <span className="mt-2 block text-xs font-bold text-brand">AI 문항 생성 — 곧 오픈</span>
+              </p>
+            )}
+
+            {!addingManual && editingIdx === null && (
+              <button
+                onClick={() => setAddingManual(true)}
+                className="w-full rounded-xl border border-dashed border-brand/40 py-3 text-sm font-bold text-brand transition hover:border-brand hover:bg-brand/5"
+              >
+                + 직접 문항 추가
+              </button>
             )}
           </div>
-
-          {/* 직접 추가 버튼 */}
-          {!addingManual && editingIdx === null && (
-            <button
-              onClick={() => setAddingManual(true)}
-              className="mt-4 w-full rounded-xl border-2 border-dashed border-brand/40 py-3 text-sm font-bold text-brand transition hover:border-brand hover:bg-brand/5"
-            >
-              + 직접 문항 추가
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* 문항이 없고 직접 추가만 원하는 경우 */}
-      {questions.length === 0 && !addingManual && !loading && (
-        <div className="mt-4">
-          {addingManual ? null : (
-            <button
-              onClick={() => setAddingManual(true)}
-              className="w-full rounded-xl border-2 border-dashed border-ink/20 py-3 text-sm font-bold text-ink/50 transition hover:border-brand/40 hover:text-brand"
-            >
-              또는 직접 문항 추가
-            </button>
-          )}
-        </div>
-      )}
-      {addingManual && questions.length === 0 && (
-        <div className="mt-4">
-          <div className="card border-2 border-dashed border-brand/40 p-4 sm:p-5">
-            <p className="mb-3 text-sm font-bold text-brand">✏️ 직접 문항 작성</p>
-            <QuestionEditor
-              initial={EMPTY_QUESTION}
-              isNew
-              onSave={addManualQuestion}
-              onCancel={() => setAddingManual(false)}
-            />
-          </div>
-        </div>
-      )}
+        </aside>
+      </div>
 
       {/* 저장 모달 */}
       {showSaveModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 px-4 pb-4 sm:items-center sm:pb-0">
           <div className="card w-full max-w-md p-6">
-            <h3 className="font-display text-xl font-bold">테스트로 저장</h3>
-            <p className="mt-1 text-sm text-ink/60">문항 {questions.length}개가 저장됩니다.</p>
+            <h3 className="text-xl font-bold">테스트로 저장</h3>
+            <p className="mt-1 text-base text-ink/60">문항 {questions.length}개가 저장됩니다.</p>
 
             <label className="mt-4 block">
               <span className="text-sm font-bold">테스트 제목</span>
@@ -442,24 +440,24 @@ export default function NewTestPage() {
                 value={saveTitle}
                 onChange={(e) => setSaveTitle(e.target.value)}
                 placeholder={`예: ${grade}학년 ${term}학기 단원평가`}
-                className="mt-1 w-full rounded-xl border-2 border-ink px-3 py-2 font-semibold focus:outline-none focus:border-brand"
+                className="mt-1 w-full rounded-xl border border-ink/20 px-3 py-2.5 text-base font-semibold focus:border-brand focus:outline-none"
                 autoFocus
               />
             </label>
 
-            {saveError && <p className="mt-2 text-sm text-coral">{saveError}</p>}
+            {saveError && <p className="mt-2 text-sm text-rose-500">{saveError}</p>}
 
             <div className="mt-5 flex gap-3">
               <button
                 onClick={() => { setShowSaveModal(false); setSaveError(null); }}
-                className="flex-1 rounded-xl border-2 border-ink py-2 font-bold"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !saveTitle.trim()}
-                className="flex-1 card bg-brand py-2 font-bold text-white disabled:opacity-50"
+                className="btn-primary flex-1 disabled:opacity-50"
               >
                 {saving ? "저장 중…" : "저장"}
               </button>

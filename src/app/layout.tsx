@@ -21,9 +21,9 @@ const notoSansKR = Noto_Sans_KR({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "단평GO — 초등 단원평가, AI로 5분 컷!",
+  title: "단평GO — 검수된 문제은행으로 3분 만에 만드는 단원평가",
   description:
-    "초등 교사가 2022 개정 교육과정에 맞춰 단원평가를 AI로 빠르게 만들고 배포·채점·분석하는 경량 SaaS",
+    "검수된 문항으로 빠르게 만들고, 바로 배포·채점까지. 초등 3학년 수학 단원평가 무료 베타.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
