@@ -48,12 +48,12 @@ export default function PlayEntryPage() {
     // pb-safe: 홈 인디케이터 영역 침범 방지
     <main className="flex min-h-[100dvh] flex-col items-center justify-center px-4 pb-8 safe-bottom">
       <Link href="/" className="font-display mb-8 text-3xl font-bold text-brandink">
-        단평<span className="text-coral">GO</span>
+        단평<span className="text-brand">GO</span>
       </Link>
 
       <div className="card w-full max-w-md p-6 sm:p-8">
-        <h1 className="font-display text-2xl font-bold">테스트 응시하기</h1>
-        <p className="mt-1 text-sm text-ink/60">
+        <h1 className="text-2xl font-bold">테스트 응시하기</h1>
+        <p className="mt-1 text-base text-ink/60">
           6자리 코드 또는 공유 링크의 코드를 입력하세요.
         </p>
 
@@ -71,7 +71,7 @@ export default function PlayEntryPage() {
               autoComplete="off"
               autoCapitalize="characters"
               inputMode="text"
-              className="w-full rounded-xl border-2 border-ink px-4 py-3.5 text-lg font-bold tracking-widest focus:outline-none focus:border-brand"
+              className="w-full min-h-[56px] rounded-xl border-2 border-ink/20 px-4 py-3.5 text-lg font-bold tracking-widest focus:border-brand focus:outline-none"
               onKeyDown={(e) => e.key === "Enter" && handleStart()}
             />
           </div>
@@ -87,23 +87,33 @@ export default function PlayEntryPage() {
               maxLength={numberMode ? 3 : 20}
               autoComplete={numberMode ? "off" : "name"}
               inputMode={numberMode ? "numeric" : "text"}
-              className="w-full rounded-xl border-2 border-ink px-4 py-3.5 text-lg font-bold focus:outline-none focus:border-brand"
+              className="w-full min-h-[56px] rounded-xl border-2 border-ink/20 px-4 py-3.5 text-lg font-bold focus:border-brand focus:outline-none"
               onKeyDown={(e) => e.key === "Enter" && handleStart()}
             />
           </div>
 
-          {error && <p className="text-sm font-bold text-coral">{error}</p>}
+          {error && <p className="text-base font-bold text-rose-500">{error}</p>}
 
-          {/* min-h-[52px]: 터치 영역 44px+ 보장 */}
+          {/* min-h-[52px]: 터치 영역 44px+ 보장 — 화면당 주요 버튼 하나 */}
           <button
             onClick={handleStart}
             disabled={loading || !shareToken.trim() || !studentName.trim()}
-            className="card w-full min-h-[52px] bg-coral text-lg font-bold text-white transition active:translate-y-0.5 disabled:opacity-40"
+            className="btn-primary w-full !min-h-[56px] !text-lg disabled:opacity-40"
           >
-            {loading ? "확인 중…" : "시작하기 →"}
+            {loading ? "확인 중…" : "시작하기"}
           </button>
         </div>
+
+        <p className="mt-5 text-center text-sm text-ink/40">
+          학생 이름은 서버에 저장하지 않습니다
+        </p>
       </div>
+
+      <p className="mt-6 text-center">
+        <Link href="/design/play" className="text-sm font-bold text-brand">
+          샘플 시험지 미리보기 →
+        </Link>
+      </p>
     </main>
   );
 }

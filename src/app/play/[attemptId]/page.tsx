@@ -148,19 +148,20 @@ export default function TestPlayerPage() {
     const correct = submitted.results.filter((r) => r.isCorrect).length;
     return (
       <main className="mx-auto max-w-xl px-4 py-8 pb-safe-or-8 safe-bottom">
-        {/* 점수 카드 */}
-        <div className="card p-6 text-center">
-          <div className="font-display text-7xl font-bold text-brand leading-none">{pct}점</div>
-          <p className="mt-3 text-base font-bold text-ink">
+        {/* 제출 완료 */}
+        <div className="card p-8 text-center sm:p-10">
+          <p className="text-sm font-bold text-brand">제출 완료</p>
+          <div className="font-display mt-2 text-7xl font-bold leading-none text-brand">{pct}점</div>
+          <p className="mt-4 text-lg font-bold text-ink">
             {data.studentName} 학생
           </p>
-          <p className="mt-1 text-sm text-ink/60">
+          <p className="mt-1 text-base text-ink/60">
             {correct}/{questions.length}문항 정답 · {submitted.score}/{submitted.maxScore}점
           </p>
-          <p className="mt-1 text-xs text-ink/40">{data.test.title}</p>
+          <p className="mt-1 text-sm text-ink/40">{data.test.title}</p>
         </div>
 
-        {/* 문항별 정오 */}
+        {/* 문항별 정오 — 정답/오답에만 보조색 */}
         <div className="mt-5 space-y-2.5">
           {questions.map((tq, i) => {
             const r = submitted.results.find((x) => x.testQuestionId === tq.id);
@@ -168,19 +169,18 @@ export default function TestPlayerPage() {
             return (
               <div
                 key={tq.id}
-                className={`card flex gap-3 p-4 ${ok ? "border-green-500" : "border-coral"}`}
-                style={{ borderLeftWidth: 4 }}
+                className={`card flex gap-3 p-4 ${ok ? "border-l-4 border-l-green-500" : "border-l-4 border-l-rose-500"}`}
               >
                 <span
-                  className={`mt-0.5 shrink-0 text-base font-bold ${ok ? "text-green-600" : "text-coral"}`}
+                  className={`mt-0.5 shrink-0 text-base font-bold ${ok ? "text-green-600" : "text-rose-500"}`}
                 >
                   {ok ? "✓" : "✗"}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold leading-snug break-words">
+                  <p className="text-base font-bold leading-snug break-words">
                     {i + 1}. {tq.question.stem}
                   </p>
-                  <p className={`mt-0.5 text-xs font-bold ${ok ? "text-green-700" : "text-coral"}`}>
+                  <p className={`mt-0.5 text-sm font-bold ${ok ? "text-green-700" : "text-rose-600"}`}>
                     {ok ? "정답" : "오답"}
                   </p>
                 </div>
@@ -189,8 +189,8 @@ export default function TestPlayerPage() {
           })}
         </div>
 
-        <div className="mt-8 text-center pb-4">
-          <Link href="/play" className="card inline-block bg-brand px-8 py-3.5 font-bold text-white">
+        <div className="mt-8 pb-4 text-center">
+          <Link href="/play" className="btn-primary inline-flex">
             다시 응시하기
           </Link>
         </div>
@@ -203,6 +203,7 @@ export default function TestPlayerPage() {
   const questions = data.test.questions;
   const tq = questions[current];
   const answeredCount = Object.keys(answers).length;
+  const remaining = questions.length - answeredCount;
   const progress = ((current + 1) / questions.length) * 100;
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -212,31 +213,32 @@ export default function TestPlayerPage() {
     <main className="mx-auto max-w-xl play-scroll" style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}>
 
       {/* ── 상단 고정 헤더 ── */}
-      <div className="sticky top-0 z-10 bg-paper/95 backdrop-blur-sm border-b border-ink/10 px-4 pt-2 pb-2 safe-top">
+      <div className="sticky top-0 z-10 border-b border-ink/8 bg-white/95 px-4 pb-3 pt-2 backdrop-blur-sm safe-top">
         {/* 시험 제목 + 타이머 */}
-        <div className="flex items-center justify-between gap-2 min-h-0">
+        <div className="flex min-h-0 items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="font-bold text-sm text-ink/70 truncate">{data.test.title}</p>
+            <p className="truncate text-sm font-bold text-ink/70">{data.test.title}</p>
             <p className="text-xs text-ink/40">{data.studentName}</p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex shrink-0 flex-col items-end gap-0.5">
             {secondsLeft !== null && (
               <span
-                className={`font-bold tabular-nums text-sm px-2 py-1 rounded-lg ${
-                  secondsLeft < 60 ? "bg-coral/10 text-coral" : "text-ink/60"
+                className={`rounded-lg px-2 py-1 text-sm font-bold tabular-nums ${
+                  secondsLeft < 60 ? "bg-amber-50 text-amber-700" : "text-ink/60"
                 }`}
               >
-                ⏱ {formatTime(secondsLeft)}
+                {formatTime(secondsLeft)}
               </span>
             )}
-            <span className="text-sm font-bold text-ink/70 tabular-nums">
+            <span className="text-sm font-bold tabular-nums text-ink/70">
               {current + 1}<span className="text-ink/30">/{questions.length}</span>
             </span>
+            <span className="text-xs font-bold text-brand">남은 문항 {remaining}</span>
           </div>
         </div>
 
         {/* 진행 바 */}
-        <div className="mt-2 h-1.5 w-full rounded-full bg-ink/10 overflow-hidden">
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink/10">
           <div
             className="h-full rounded-full bg-brand transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -244,30 +246,26 @@ export default function TestPlayerPage() {
         </div>
       </div>
 
-      {/* ── 문항 카드 ── */}
-      <div className="px-4 pt-4">
-        <div className="card p-5 sm:p-6">
-          <p className="font-bold text-base sm:text-lg leading-relaxed">
-            <span className="text-brand font-display text-xl mr-1">{current + 1}.</span>
+      {/* ── 문항 카드 (태블릿 손가락 풀이) ── */}
+      <div className="px-4 pt-5">
+        <div className="card p-6 sm:p-8">
+          <p className="text-lg font-bold leading-relaxed sm:text-xl">
+            <span className="mr-2 font-display text-2xl text-brand">{current + 1}.</span>
             {tq.question.stem}
           </p>
 
           {tq.question.type === "MULTIPLE_CHOICE" ? (
-            <ul className="mt-5 space-y-2.5">
+            <ul className="mt-6 space-y-3">
               {tq.question.choices.map((c) => {
                 const selected = answers[tq.id] === c.id;
                 return (
                   <li key={c.id}>
                     <button
                       onClick={() => setAnswers((a) => ({ ...a, [tq.id]: c.id }))}
-                      // min-h-[52px]: iOS 권장 44px + 여유. active:scale로 터치 피드백
-                      className={`w-full min-h-[52px] rounded-xl border-2 px-4 py-3 text-left font-bold text-sm sm:text-base transition-all active:scale-[0.98] ${
-                        selected
-                          ? "border-brand bg-brand/10 text-brand shadow-sm"
-                          : "border-ink/20 bg-white hover:border-ink/40"
-                      }`}
+                      className="touch-choice"
+                      data-selected={selected}
                     >
-                      <span className={`mr-2 text-base ${selected ? "text-brand" : "text-ink/40"}`}>
+                      <span className={`mr-2 ${selected ? "text-brand" : "text-ink/35"}`}>
                         {["①", "②", "③", "④"][c.order - 1]}
                       </span>
                       {c.text}
@@ -277,7 +275,7 @@ export default function TestPlayerPage() {
               })}
             </ul>
           ) : (
-            <div className="mt-5">
+            <div className="mt-6">
               <input
                 ref={shortAnswerRef}
                 type="text"
@@ -289,56 +287,54 @@ export default function TestPlayerPage() {
                   setTimeout(() => shortAnswerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
                 }}
                 placeholder="답을 입력하세요"
-                className="w-full min-h-[52px] rounded-xl border-2 border-ink px-4 py-3 text-lg font-bold focus:outline-none focus:border-brand"
+                className="w-full min-h-[56px] rounded-xl border-2 border-ink/20 px-4 py-3 text-lg font-bold focus:border-brand focus:outline-none"
               />
             </div>
           )}
         </div>
 
-        {/* ── 이전/다음·제출 버튼 ── */}
-        <div className="mt-4 flex gap-3">
+        {/* ── 이전/다음·제출 버튼 — 주요 행동 하나 강조 ── */}
+        <div className="mt-5 flex gap-3">
           <button
             onClick={() => setCurrent((c) => Math.max(0, c - 1))}
             disabled={current === 0}
-            // min-h-[52px] + flex-1로 터치 영역 확보
-            className="card flex-1 min-h-[52px] font-bold disabled:opacity-30 active:translate-y-0.5"
+            className="btn-secondary flex-1 !min-h-[56px] disabled:opacity-30"
           >
-            ← 이전
+            이전
           </button>
 
           {current < questions.length - 1 ? (
             <button
               onClick={() => setCurrent((c) => c + 1)}
-              className="card flex-[2] min-h-[52px] bg-brand font-bold text-white active:translate-y-0.5"
+              className="btn-primary flex-[2] !min-h-[56px]"
             >
-              다음 →
+              다음 문항
             </button>
           ) : (
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="card flex-[2] min-h-[52px] bg-coral font-bold text-white disabled:opacity-50 active:translate-y-0.5"
+              className="btn-primary flex-[2] !min-h-[56px] disabled:opacity-50"
             >
-              {submitting ? "제출 중…" : `제출 (${answeredCount}/${questions.length})`}
+              {submitting ? "제출 중…" : `제출하기 (${answeredCount}/${questions.length})`}
             </button>
           )}
         </div>
 
-        {submitError && <p className="mt-3 text-sm font-bold text-coral">{submitError}</p>}
+        {submitError && <p className="mt-3 text-base font-bold text-rose-500">{submitError}</p>}
 
         {/* ── 문항 점프 네비 ── */}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2">
           {questions.map((q, i) => (
             <button
               key={q.id}
               onClick={() => setCurrent(i)}
-              // h-11 w-11 = 44px: Apple HIG 최소 터치 권장 크기
-              className={`h-11 w-11 rounded-xl text-sm font-bold transition active:scale-95 ${
+              className={`h-12 w-12 rounded-xl text-sm font-bold transition active:scale-95 ${
                 i === current
-                  ? "bg-brand text-white shadow"
+                  ? "bg-brand text-white"
                   : answers[q.id]
-                  ? "bg-mint/25 text-green-800 border-2 border-mint/50"
-                  : "bg-ink/10 text-ink/60"
+                  ? "border-2 border-brand/30 bg-brand/10 text-brand"
+                  : "bg-ink/8 text-ink/55"
               }`}
             >
               {i + 1}

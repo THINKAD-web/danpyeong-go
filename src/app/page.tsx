@@ -1,45 +1,47 @@
 import Link from "next/link";
-import { GeneratePreview, ReportPreview, SharePreview } from "@/components/ProductPreviews";
-import { getPublicStats, type PublicStats } from "@/lib/public-stats";
+import {
+  IconBook,
+  IconChart,
+  IconCheck,
+  IconDevice,
+  IconFile,
+  IconLink,
+  IconList,
+  IconLock,
+  IconShield,
+  IconSpark,
+  IconUsers,
+} from "@/components/icons";
+import { PickPreview, ReportPreview, SharePreview } from "@/components/ProductPreviews";
 
-// 사회적 증거 숫자는 DB 집계 — 1시간 단위로만 다시 계산
-export const revalidate = 3600;
-
-// ── 베타 교사 후기 ──────────────────────────────────────────
-// ⚠️ 실제 교사에게 받은, 게재 동의를 받은 후기만 넣는다 (지어낸 후기 금지).
-// 비어 있으면 후기 카드는 숨겨지고 이용 숫자만 표시된다.
-// 예: { quote: "…", author: "서울 ○○초 3학년 담임" }
-const TESTIMONIALS: { quote: string; author: string }[] = [];
-
-// ── 차별점 데이터 ─────────────────────────────────────────
 const FEATURES = [
   {
-    icon: "📐",
+    icon: IconShield,
+    title: "모든 문항 사람이 검수 + 오류 신고 즉시 반영",
+    desc: "문제은행 문항은 사람이 검수한 뒤 제공합니다. 오류가 보이면 신고해 주세요. 바로 반영합니다.",
+  },
+  {
+    icon: IconBook,
     title: "2022 개정 교육과정 기준",
-    desc: "초등 3~4학년 수학 단원, 성취기준에 맞춰 문항이 생성됩니다.",
+    desc: "초등 3학년 수학 전 단원 문항을 성취기준에 맞춰 준비했습니다. 4학년은 순차 오픈 예정입니다.",
   },
   {
-    icon: "🔍",
-    title: "AI 자기검산 탑재",
-    desc: "생성 후 AI가 정답을 직접 다시 풀어 오류를 걸러냅니다. 나눗셈 나머지 오류도 자동 차단.",
-  },
-  {
-    icon: "👤",
+    icon: IconUsers,
     title: "학생 로그인 불필요",
-    desc: "학생은 시험 코드와 이름(또는 출석번호)만 입력하면 바로 응시. 계정 만들 필요 없습니다.",
+    desc: "학생은 시험 코드와 이름(또는 출석번호)만 입력하면 바로 응시합니다. 계정 만들 필요가 없습니다.",
   },
   {
-    icon: "📊",
+    icon: IconChart,
     title: "즉시 채점·분석 리포트",
-    desc: "제출 즉시 문항별 정답률, 취약 문항 하이라이트. PDF·Excel 내보내기 지원.",
+    desc: "제출 즉시 문항별 정답률, 취약 문항 하이라이트. PDF·Excel 내보내기를 지원합니다.",
   },
   {
-    icon: "✏️",
-    title: "생성 후 직접 편집 가능",
-    desc: "AI 초안을 그대로 쓰거나, 문항 삭제·수정 후 저장. 교사가 최종 검수합니다.",
+    icon: IconList,
+    title: "단원 전체 또는 직접 선택",
+    desc: "단원 전체를 담거나, 원하는 문항만 골라 시험지를 완성할 수 있습니다.",
   },
   {
-    icon: "📱",
+    icon: IconDevice,
     title: "태블릿·폰 응시 최적화",
     desc: "학생은 PC 없이 태블릿이나 스마트폰으로 응시할 수 있습니다.",
   },
@@ -48,244 +50,198 @@ const FEATURES = [
 const STEPS = [
   {
     step: "1",
-    emoji: "✨",
-    title: "AI로 문항 생성",
-    desc: "단원·난이도·문항 수를 고르면 AI가 객관식·단답형 초안을 만들어요. 생성 후 수정·삭제도 자유롭습니다.",
-    detail: "보통 30초~2분 소요",
+    icon: IconList,
+    title: "문항 고르기 (단원 전체 / 직접 선택)",
+    desc: "검수된 문제은행에서 단원을 고르거나, 필요한 문항만 직접 선택해 시험지를 만듭니다.",
+    detail: "보통 3분 이내",
   },
   {
     step: "2",
-    emoji: "🔗",
+    icon: IconLink,
     title: "링크·코드로 배포",
-    desc: "테스트를 저장하면 공유 링크와 코드가 생성돼요. 학생에게 카톡·알림장으로 전달하면 끝.",
+    desc: "테스트를 저장하면 공유 링크와 코드가 생성됩니다. 학생에게 카톡·알림장으로 전달하면 끝입니다.",
     detail: "학생은 로그인 없이 응시",
   },
   {
     step: "3",
-    emoji: "📊",
+    icon: IconChart,
     title: "자동 채점·분석",
     desc: "학생이 제출하면 즉시 채점됩니다. 문항별 정답률, 학생별 점수를 한눈에 확인하고 리포트를 내보내세요.",
     detail: "PDF·Excel 다운로드",
   },
 ];
 
-const STEP_PREVIEWS = [GeneratePreview, SharePreview, ReportPreview];
+const STEP_PREVIEWS = [PickPreview, SharePreview, ReportPreview];
 
-export default async function Home() {
-  const stats = await getPublicStats();
+export default function Home() {
   return (
     <div className="min-h-screen">
-
       {/* ── 네비게이션 ── */}
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <div className="font-display text-2xl font-bold text-brandink">
-          단평<span className="text-coral">GO</span>
+      <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5 sm:px-6">
+        <div className="font-display text-2xl font-bold tracking-tight text-brandink sm:text-3xl">
+          단평<span className="text-brand">GO</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/play"
-            className="text-sm font-bold text-ink/60 hover:text-ink transition"
+            className="px-2 py-2 text-sm font-bold text-ink/60 transition hover:text-ink sm:px-3"
           >
             학생 응시
           </Link>
-          <Link
-            href="/teacher"
-            className="card bg-brand px-4 py-2 text-sm font-bold text-white transition hover:-translate-y-0.5"
-          >
-            교사 로그인
+          <Link href="/teacher" className="btn-primary !min-h-11 !px-4 !py-2 !text-sm !shadow-none">
+            교사 시작
           </Link>
         </div>
       </header>
 
-      {/* ── 히어로 ── */}
-      <section className="mx-auto max-w-5xl px-6 pb-16 pt-12 text-center sm:pt-20">
-        {/* 배지 */}
-        <span className="inline-block rounded-full border-2 border-brand/30 bg-brand/5 px-4 py-1 text-sm font-bold text-brand">
-          초등학교 3~4학년 수학 · 2022 개정 교육과정
-        </span>
+      {/* ── 히어로 (한 화면·한 구성) ── */}
+      <section className="relative mx-auto max-w-5xl overflow-hidden px-5 pb-16 pt-10 text-center sm:px-6 sm:pb-20 sm:pt-16">
+        <p className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-4 py-1.5 text-sm font-bold text-brand">
+          초등 3학년 수학 (4학년 순차 오픈)
+        </p>
 
-        <h1 className="font-display mt-6 text-5xl font-bold leading-tight sm:text-6xl md:text-7xl">
-          초등 단원평가,
-          <br />
-          <span className="scribble-underline">AI로 5분 컷!</span>
+        <h1 className="font-display mt-6 text-[2.35rem] font-bold leading-[1.15] tracking-tight text-ink sm:text-5xl md:text-6xl">
+          단평<span className="text-brand">GO</span>
         </h1>
-
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-ink/70 sm:text-xl">
-          단원만 고르면 AI가 문항을 만들고, 학생은 코드로 응시하고, 결과는 즉시 분석돼요.
-          <br className="hidden sm:block" />
-          <span className="font-bold text-ink">출제부터 분석까지 — 교사 혼자서 5분.</span>
+        <p className="mx-auto mt-4 max-w-2xl text-2xl font-bold leading-snug text-ink sm:text-3xl md:text-4xl">
+          3분이면 단원평가 완성,{" "}
+          <span className="scribble-underline text-brand">무료 베타</span>
         </p>
 
-        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Link
-            href="/teacher"
-            className="card bg-brand px-8 py-4 text-lg font-bold text-white transition hover:-translate-y-1 active:translate-y-0"
-          >
-            👩‍🏫 교사로 시작하기 — 무료
+        <p className="mx-auto mt-5 max-w-xl text-base text-ink/70 sm:text-lg">
+          검수된 3학년 수학 전 단원 문항에서 골라 바로 시험지 완성
+        </p>
+
+        <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+          <Link href="/teacher" className="btn-primary">
+            무료로 시험지 만들기
           </Link>
-          <Link
-            href="/demo"
-            className="card bg-sun/40 px-8 py-4 text-lg font-bold transition hover:-translate-y-1 active:translate-y-0"
-          >
-            ✨ AI 샘플 문항 보기
-          </Link>
-          <Link
-            href="/play"
-            className="card bg-white px-8 py-4 text-lg font-bold transition hover:-translate-y-1 active:translate-y-0"
-          >
-            ✏️ 학생 — 코드로 응시
+          <Link href="/design/play" className="btn-secondary">
+            <IconFile size={18} />
+            샘플 시험지 보기
           </Link>
         </div>
 
-        <p className="mt-4 text-sm text-ink/40">
-          가입 전 AI 샘플 문항 미리보기 가능 · 학생은 코드+이름(또는 출석번호)만으로 응시
-        </p>
-
-        <div className="mt-8 flex justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-mint/30 px-4 py-1.5 text-sm font-bold">
-            🎉 오픈 베타 — 무료 사용 중
-          </span>
-        </div>
-        <p className="mx-auto mt-2 max-w-md text-xs text-ink/40">
-          기본 기능은 정식 전환 후에도 계속 무료입니다.
+        <p className="mt-5 flex items-center justify-center gap-1.5 text-sm text-ink/45">
+          <IconLock size={14} className="shrink-0" />
+          학생 이름은 서버에 저장하지 않습니다
         </p>
       </section>
 
       {/* ── 3단계 흐름 ── */}
-      <section className="bg-white/60 py-16">
-        <div className="mx-auto max-w-5xl px-6">
-          <h2 className="font-display text-center text-3xl font-bold sm:text-4xl">
-            이렇게 쓰면 돼요
+      <section className="border-y border-ink/8 bg-white/70 py-16">
+        <div className="mx-auto max-w-5xl px-5 sm:px-6">
+          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+            이렇게 쓰면 됩니다
           </h2>
-          <p className="mt-3 text-center text-ink/60">처음 쓰는 선생님도 5분이면 첫 평가를 만들 수 있어요.</p>
+          <p className="mt-3 text-center text-base text-ink/60">
+            검수된 문제은행으로 고르고, 배포하고, 바로 채점합니다.
+          </p>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
             {STEPS.map((s, i) => {
               const Preview = STEP_PREVIEWS[i];
+              const StepIcon = s.icon;
               return (
-              <div key={s.step} className="card flex flex-col p-6">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand font-display text-lg font-bold text-white shrink-0">
-                    {s.step}
-                  </span>
-                  <span className="text-2xl">{s.emoji}</span>
+                <div key={s.step} className="card flex flex-col p-5 sm:p-6">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand font-display text-lg font-bold text-white shrink-0">
+                      {s.step}
+                    </span>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/8 text-brand">
+                      <StepIcon size={20} />
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold leading-snug">{s.title}</h3>
+                  <p className="mt-2 text-base leading-relaxed text-ink/70">{s.desc}</p>
+                  <p className="mt-3 border-t border-ink/8 pt-3 text-xs font-bold text-brand/80">
+                    {s.detail}
+                  </p>
+                  <div className="mt-4 flex-1">
+                    <Preview />
+                  </div>
                 </div>
-                <h3 className="mt-4 text-xl font-bold">{s.title}</h3>
-                <p className="mt-2 text-ink/70 leading-relaxed">{s.desc}</p>
-                <p className="mt-3 text-xs font-bold text-brand/70 border-t border-ink/10 pt-3">{s.detail}</p>
-                <div className="mt-4 flex-1">
-                  <Preview />
-                </div>
-              </div>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* ── 차별점 6개 ── */}
-      <section className="mx-auto max-w-5xl px-6 py-16">
-        <h2 className="font-display text-center text-3xl font-bold sm:text-4xl">
+      {/* ── 특징 ── */}
+      <section className="mx-auto max-w-5xl px-5 py-16 sm:px-6">
+        <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
           왜 단평GO인가요?
         </h2>
-        <p className="mt-3 text-center text-ink/60">
-          실제로 작동하는 것만 적었어요.
+        <p className="mt-3 text-center text-base text-ink/60">
+          교실에서 바로 쓸 수 있는 것만 담았습니다.
         </p>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="card p-5 flex gap-4">
-              <span className="text-3xl shrink-0 mt-0.5">{f.icon}</span>
-              <div>
-                <h3 className="font-bold text-base">{f.title}</h3>
-                <p className="mt-1 text-sm text-ink/60 leading-relaxed">{f.desc}</p>
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f) => {
+            const Icon = f.icon;
+            return (
+              <div key={f.title} className="card flex gap-4 p-5">
+                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/8 text-brand">
+                  <Icon size={20} />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold leading-snug">{f.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink/60 sm:text-base">
+                    {f.desc}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
-      {/* ── 사회적 증거 ── */}
-      <SocialProof stats={stats} />
-
       {/* ── 하단 CTA ── */}
-      <section className="border-t-2 border-ink/10 bg-brand py-16 text-center">
-        <h2 className="font-display text-3xl font-bold text-white sm:text-4xl">
-          지금 바로 첫 단원평가를 만들어보세요
+      <section className="border-t border-ink/8 bg-brand py-16 text-center">
+        <h2 className="text-2xl font-bold text-white sm:text-3xl">
+          지금 바로 첫 단원평가를 만들어 보세요
         </h2>
-        <p className="mt-3 text-white/80">
-          무료 · 가입 즉시 사용 · 별도 설치 없음
-        </p>
-        <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+        <p className="mt-3 text-base text-white/80">무료 베타 · 가입 즉시 사용 · 별도 설치 없음</p>
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/teacher"
-            className="card bg-white px-8 py-4 text-lg font-bold text-brand transition hover:-translate-y-1"
+            className="inline-flex min-h-[52px] items-center justify-center rounded-xl bg-white px-8 py-3.5 text-lg font-bold text-brand transition hover:-translate-y-0.5"
           >
-            👩‍🏫 교사로 시작하기
+            교사로 시작하기
           </Link>
           <Link
-            href="/play"
-            className="rounded-xl border-2 border-white/50 px-8 py-4 text-lg font-bold text-white transition hover:-translate-y-1"
+            href="/design/teacher"
+            className="inline-flex min-h-[52px] items-center justify-center rounded-xl border-2 border-white/50 px-8 py-3.5 text-lg font-bold text-white transition hover:-translate-y-0.5"
           >
-            ✏️ 학생 응시하기
+            시안 미리보기
           </Link>
         </div>
+        <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white/90">
+          <IconSpark size={14} />
+          AI 문항 생성 — 곧 오픈
+        </p>
       </section>
 
       {/* ── 푸터 ── */}
-      <footer className="border-t border-ink/10 py-8 text-center text-sm text-ink/40">
-        <p className="font-display text-base font-bold text-brandink">
-          단평<span className="text-coral">GO</span>
+      <footer className="border-t border-ink/8 py-10 text-center text-sm text-ink/45">
+        <p className="font-display text-lg font-bold text-brandink">
+          단평<span className="text-brand">GO</span>
         </p>
-        <p className="mt-1">초등 교사를 위한 AI 단원평가 도구</p>
-        <p className="mt-3">
+        <p className="mt-1 text-base">검수된 문제은행으로 만드는 초등 단원평가</p>
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-ink/50">
+          <IconCheck size={14} />
+          학생 이름은 서버에 저장하지 않습니다
+        </p>
+        <p className="mt-4">
           <Link href="/privacy" className="font-bold text-ink/60 hover:text-brand">
             개인정보처리방침
+          </Link>
+          <span className="mx-2 text-ink/20">·</span>
+          <Link href="/design" className="font-bold text-ink/60 hover:text-brand">
+            디자인 시안
           </Link>
         </p>
       </footer>
     </div>
-  );
-}
-
-function SocialProof({ stats }: { stats: PublicStats | null }) {
-  if (!stats && TESTIMONIALS.length === 0) return null;
-  return (
-    <section className="bg-white/60 py-16">
-      <div className="mx-auto max-w-5xl px-6">
-        <h2 className="font-display text-center text-3xl font-bold sm:text-4xl">
-          선생님들이 이미 쓰고 있어요
-        </h2>
-
-        {stats && (
-          <dl className="mx-auto mt-8 grid max-w-2xl grid-cols-3 gap-3 text-center">
-            {[
-              ["평가를 배포한 선생님", stats.teachers, "명"],
-              ["학생 응시", stats.submissions, "회"],
-              ["만들어진 평가", stats.tests, "개"],
-            ].map(([label, value, unit]) => (
-              <div key={label} className="card px-2 py-4">
-                <dd className="font-display text-3xl font-bold text-brand sm:text-4xl tabular-nums">
-                  {Number(value).toLocaleString("ko-KR")}
-                  <span className="ml-0.5 text-base text-ink/60">{unit}</span>
-                </dd>
-                <dt className="mt-1 text-xs font-bold text-ink/60 sm:text-sm">{label}</dt>
-              </div>
-            ))}
-          </dl>
-        )}
-
-        {TESTIMONIALS.length > 0 && (
-          <div className="mt-8 grid gap-5 md:grid-cols-3">
-            {TESTIMONIALS.map((t) => (
-              <blockquote key={t.author} className="card p-5">
-                <p className="leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
-                <footer className="mt-3 text-sm font-bold text-ink/50">— {t.author}</footer>
-              </blockquote>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
   );
 }

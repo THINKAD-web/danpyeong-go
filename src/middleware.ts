@@ -6,6 +6,7 @@ const isPublic = createRouteMatcher([
   "/privacy",
   "/demo(.*)",
   "/api/demo(.*)",
+  "/design(.*)", // 디자인 시안 미리보기 (로그인 없이 확인)
   "/play(.*)",
   "/api/play(.*)",
   // Clerk 서버 → svix 서명 검증이 인증을 대체한다 (route.ts 참고)
